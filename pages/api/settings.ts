@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({
-      embeddedIframeUrl: shopRecord.settings?.embeddedIframeUrl || 'https://feedogocloud.com',
+      embeddedIframeUrl: shopRecord.settings?.embeddedIframeUrl || 'https://shopifyapp.xmasforest.com',
       embedHeight: shopRecord.settings?.embedHeight || 600,
       thankYouModalConfig: shopRecord.settings?.thankYouModalConfig || null,
       enableAutoRegister: shopRecord.settings?.enableAutoRegister ?? true,
@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { shopId: shopRecord.id },
       create: {
         shopId: shopRecord.id,
-        embeddedIframeUrl: embeddedIframeUrl || 'https://feedogocloud.com',
+        embeddedIframeUrl: embeddedIframeUrl || 'https://shopifyapp.xmasforest.com',
         embedHeight: embedHeight || 600,
         thankYouModalConfig: thankYouModalConfig || null,
         enableAutoRegister: enableAutoRegister ?? true,

@@ -29,7 +29,7 @@ model AppSetting {
   feedogoSsoSecret      String?
   enableAutoRegister    Boolean  @default(true)
   enableSso             Boolean  @default(true)
-  embeddedIframeUrl     String   @default("https://feedogocloud.com")
+  embeddedIframeUrl     String   @default("https://shopifyapp.xmasforest.com")
   embedHeight           Int      @default(600)
   thankYouModalConfig   Json?
   createdAt             DateTime @default(now())

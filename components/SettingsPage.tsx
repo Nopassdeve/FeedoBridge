@@ -50,7 +50,7 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
   const [error, setError] = useState<string | null>(null);
 
   // 基础设置
-  const [url, setUrl] = useState('https://feedogocloud.com');
+  const [url, setUrl] = useState('https://shopifyapp.xmasforest.com');
   const [embedHeight, setEmbedHeight] = useState(600);
   const [autoRegister, setAutoRegister] = useState(true);
   const [enableSso, setEnableSso] = useState(true);

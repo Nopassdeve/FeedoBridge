@@ -7,8 +7,53 @@
 | 项目名称 | FeedoBridge |
 | 开发者 | NopassDev |
 | GitHub | https://github.com/Nopassdeve/FeedoBridge |
-| VPS 部署 | Hostinger VPS |
+| App 域名 | https://shopifyapp.xmasforest.com |
+| VPS | Hostinger (76.13.98.3) |
 | 部署路径 | /opt/feedobridge |
+
+---
+
+## 服务器配置
+
+### VPS 连接信息
+
+```
+IP: 76.13.98.3
+用户: root
+部署目录: /opt/feedobridge
+```
+
+### Shopify App 配置
+
+```
+Client ID: 9da46159e4de788dab1f3cc2533551e4
+Client Secret: 在 .env 文件中配置 (SHOPIFY_API_SECRET)
+App URL: https://shopifyapp.xmasforest.com
+```
+
+### 环境变量 (.env)
+
+在 VPS 的 `/opt/feedobridge/.env` 文件中配置：
+
+```env
+# 数据库
+DATABASE_URL="postgresql://user:password@localhost:5432/feedobridge"
+
+# Redis
+REDIS_URL="redis://localhost:6379"
+
+# Shopify App
+SHOPIFY_API_KEY="9da46159e4de788dab1f3cc2533551e4"
+SHOPIFY_API_SECRET="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"
+
+# App URL
+APP_URL="https://shopifyapp.xmasforest.com"
+
+# FeedoGo API (待配置)
+FEEDOGO_API_KEY=""
+FEEDOGO_WEBHOOK_URL=""
+SSO_SECRET=""
+```
 
 ---
 
@@ -85,8 +130,7 @@
 
 **方案 C - 使用 VPS 服务地址：**
 如果 FeedoGo 部署在 VPS 上，URL 应该是：
-- `http://你的VPS_IP:端口号`
-- 或者配置域名解析后使用域名
+- `https://shopifyapp.xmasforest.com` ✅ 已配置
 
 ---
 
@@ -110,7 +154,7 @@
 
 ```bash
 # SSH 登录
-ssh username@your-vps-ip
+ssh root@76.13.98.3
 
 # 进入项目目录
 cd /opt/feedobridge
@@ -124,16 +168,13 @@ docker compose up -d --build
 
 ### 环境变量配置
 
-在 VPS 的 `/opt/feedobridge/.env` 文件中配置：
+**重要：敏感信息已配置在 VPS 的 .env 文件中，不要提交到 Git！**
 
-```env
-DATABASE_URL="postgresql://user:password@localhost:5432/feedobridge"
-REDIS_URL="redis://localhost:6379"
-SHOPIFY_API_KEY="你的API Key"
-SHOPIFY_API_SECRET="你的API Secret"
-FEEDOGO_API_KEY="FeedoGo API Key"
-FEEDOGO_WEBHOOK_URL="FeedoGo Webhook URL"
-SSO_SECRET="SSO 签名密钥"
+SSH 登录 VPS 后编辑 `.env` 文件：
+```bash
+ssh root@76.13.98.3
+cd /opt/feedobridge
+nano .env
 ```
 
 ### 数据库迁移
