@@ -26,8 +26,11 @@ model AppSetting {
   shop                  Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   feedogoApiKey         String?
   feedogoWebhookUrl     String?
+  feedogoSsoSecret      String?
   enableAutoRegister    Boolean  @default(true)
+  enableSso             Boolean  @default(true)
   embeddedIframeUrl     String   @default("https://feedogocloud.com")
+  embedHeight           Int      @default(600)
   thankYouModalConfig   Json?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

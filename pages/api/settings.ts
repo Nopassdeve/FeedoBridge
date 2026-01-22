@@ -20,13 +20,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       embeddedIframeUrl: shopRecord.settings?.embeddedIframeUrl || 'https://feedogocloud.com',
+      embedHeight: shopRecord.settings?.embedHeight || 600,
       thankYouModalConfig: shopRecord.settings?.thankYouModalConfig || null,
-      enableAutoRegister: shopRecord.settings?.enableAutoRegister ?? true
+      enableAutoRegister: shopRecord.settings?.enableAutoRegister ?? true,
+      enableSso: shopRecord.settings?.enableSso ?? true,
+      feedogoApiKey: shopRecord.settings?.feedogoApiKey || '',
+      feedogoWebhookUrl: shopRecord.settings?.feedogoWebhookUrl || '',
+      feedogoSsoSecret: shopRecord.settings?.feedogoSsoSecret || ''
     });
   }
 
   if (req.method === 'POST') {
-    const { embeddedIframeUrl, thankYouModalConfig, enableAutoRegister } = req.body;
+    const { 
+      embeddedIframeUrl, 
+      embedHeight,
+      thankYouModalConfig, 
+      enableAutoRegister,
+      enableSso,
+      feedogoApiKey,
+      feedogoWebhookUrl,
+      feedogoSsoSecret
+    } = req.body;
 
     const shopRecord = await prisma.shop.findUnique({
       where: { shopifyShopId: shop }
@@ -41,13 +55,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       create: {
         shopId: shopRecord.id,
         embeddedIframeUrl: embeddedIframeUrl || 'https://feedogocloud.com',
+        embedHeight: embedHeight || 600,
         thankYouModalConfig: thankYouModalConfig || null,
-        enableAutoRegister: enableAutoRegister ?? true
+        enableAutoRegister: enableAutoRegister ?? true,
+        enableSso: enableSso ?? true,
+        feedogoApiKey: feedogoApiKey || null,
+        feedogoWebhookUrl: feedogoWebhookUrl || null,
+        feedogoSsoSecret: feedogoSsoSecret || null
       },
       update: {
         embeddedIframeUrl,
+        embedHeight,
         thankYouModalConfig,
-        enableAutoRegister
+        enableAutoRegister,
+        enableSso,
+        feedogoApiKey,
+        feedogoWebhookUrl,
+        feedogoSsoSecret
       }
     });
 
