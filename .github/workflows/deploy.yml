@@ -1,0 +1,22 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main  # 只有推送到 main 分支时才触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy using ssh
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: 22
+          script: |
+            cd /opt/feedobridge
+            git pull origin main
+            docker compose up -d --build
