@@ -1,0 +1,23 @@
+name = "FeedoBridge"
+client_id = ""
+application_url = "https://localhost:3000"
+embedded = true
+
+[access_scopes]
+scopes = "read_products,write_products,read_customers,write_customers,read_orders,write_orders"
+
+[auth]
+redirect_urls = [
+  "https://localhost:3000/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-01"
+
+[pos]
+embedded = false
+
+[[app_proxy]]
+url = "https://localhost:3000/proxy"
+subpath = "feedobridge"
+prefix = "apps"

@@ -1,0 +1,94 @@
+{% if block.settings.enable_sso and customer %}
+  {% assign customer_id = customer.id %}
+  {% assign customer_email = customer.email %}
+{% else %}
+  {% assign customer_id = '' %}
+  {% assign customer_email = '' %}
+{% endif %}
+
+<div id="feedobridge-embed-{{ block.id }}" class="feedobridge-embed-container">
+  <iframe
+    id="feedobridge-iframe-{{ block.id }}"
+    src="{{ block.settings.embed_url }}?shop={{ shop.permanent_domain }}&customerId={{ customer_id }}&customerEmail={{ customer_email }}"
+    style="width: 100%; height: {{ block.settings.height }}px; border: none;"
+    frameborder="0"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+    loading="lazy"
+  ></iframe>
+</div>
+
+<script>
+(function() {
+  const iframe = document.getElementById('feedobridge-iframe-{{ block.id }}');
+  
+  window.addEventListener('message', function(event) {
+    const allowedOrigin = new URL('{{ block.settings.embed_url }}').origin;
+    if (event.origin !== allowedOrigin) return;
+
+    if (event.data.type === 'RESIZE' && event.data.height) {
+      iframe.style.height = event.data.height + 'px';
+    }
+
+    if (event.data.type === 'SSO_SUCCESS') {
+      console.log('FeedoBridge SSO login successful');
+    }
+  });
+
+  iframe.addEventListener('load', function() {
+    {% if customer %}
+    iframe.contentWindow.postMessage({
+      type: 'SHOPIFY_CUSTOMER_DATA',
+      customerId: '{{ customer_id }}',
+      customerEmail: '{{ customer_email }}',
+      customerName: '{{ customer.name }}'
+    }, allowedOrigin);
+    {% endif %}
+  });
+})();
+</script>
+
+<style>
+.feedobridge-embed-container {
+  width: 100%;
+  margin: 20px 0;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .feedobridge-embed-container iframe {
+    height: auto;
+    min-height: 400px;
+  }
+}
+</style>
+
+{% schema %}
+{
+  "name": "FeedoBridge Embed",
+  "target": "section",
+  "settings": [
+    {
+      "type": "url",
+      "id": "embed_url",
+      "label": "Embed URL",
+      "default": "https://feedogocloud.com"
+    },
+    {
+      "type": "range",
+      "id": "height",
+      "min": 400,
+      "max": 1200,
+      "step": 50,
+      "unit": "px",
+      "label": "Height",
+      "default": 600
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_sso",
+      "label": "Enable SSO Login",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

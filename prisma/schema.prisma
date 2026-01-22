@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id              String   @id @default(uuid())
+  shopifyShopId   String   @unique
+  shopName        String
+  accessToken     String
+  apiVersion      String   @default("2024-01")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  settings        AppSetting?
+  userMappings    UserMapping[]
+  orderLogs       OrderPushLog[]
+}
+
+model AppSetting {
+  id                    String   @id @default(uuid())
+  shopId                String   @unique
+  shop                  Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  feedogoApiKey         String?
+  feedogoWebhookUrl     String?
+  enableAutoRegister    Boolean  @default(true)
+  embeddedIframeUrl     String   @default("https://feedogocloud.com")
+  thankYouModalConfig   Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model UserMapping {
+  id                  String   @id @default(uuid())
+  shopId              String
+  shop                Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifyCustomerId   String
+  feedogoUserId       String?
+  feedogoEmail        String
+  syncStatus          String   @default("pending")
+  lastSyncAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([shopifyCustomerId, shopId])
+}
+
+model OrderPushLog {
+  id               String   @id @default(uuid())
+  shopId           String
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifyOrderId   String
+  feedogoOrderId   String?
+  status           String   @default("pending")
+  errorMessage     String?
+  retryCount       Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([shopifyOrderId])
+  @@index([status])
+}
