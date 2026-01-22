@@ -1,6 +1,6 @@
 name = "FeedoBridge"
-client_id = ""
-application_url = "https://localhost:3000"
+client_id = "9da46159e4de788dab1f3cc2533551e4"
+application_url = "https://shopifyapp.xmasforest.com"
 embedded = true
 
 [access_scopes]
@@ -8,7 +8,7 @@ scopes = "read_products,write_products,read_customers,write_customers,read_order
 
 [auth]
 redirect_urls = [
-  "https://localhost:3000/api/auth/callback"
+  "https://shopifyapp.xmasforest.com/api/auth/callback"
 ]
 
 [webhooks]
@@ -18,6 +18,6 @@ api_version = "2024-01"
 embedded = false
 
 [[app_proxy]]
-url = "https://localhost:3000/proxy"
+url = "https://shopifyapp.xmasforest.com/proxy"
 subpath = "feedobridge"
 prefix = "apps"
