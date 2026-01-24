@@ -1,63 +1,174 @@
 {% if block.settings.enable_sso and customer %}
   {% assign customer_id = customer.id %}
   {% assign customer_email = customer.email %}
+  {% assign sso_params = '&customerId=' | append: customer_id | append: '&customerEmail=' | append: customer_email %}
 {% else %}
-  {% assign customer_id = '' %}
-  {% assign customer_email = '' %}
+  {% assign sso_params = '' %}
 {% endif %}
 
-<div id="feedobridge-embed-{{ block.id }}" class="feedobridge-embed-container">
-  <iframe
+{% comment %} 确定使用PC还是移动端URL {% endcomment %}
+{% assign pc_url = block.settings.embed_url_pc %}
+{% assign mobile_url = block.settings.embed_url_mobile %}
+
+{% if pc_url == blank %}
+  {% assign pc_url = block.settings.embed_url_pc %}
+{% endif %}
+
+{% if mobile_url == blank %}
+  {% assign mobile_url = block.settings.embed_url_mobile %}
+{% endif %}
+
+<div id="feedobridge-embed-{{ block.id }}" class="feedobridge-embed-container" style="width: 100%; overflow: hidden; position: relative; -webkit-overflow-scrolling: touch; height: 90vh;">
+  <iframe 
     id="feedobridge-iframe-{{ block.id }}"
-    src="{{ block.settings.embed_url }}?shop={{ shop.permanent_domain }}&customerId={{ customer_id }}&customerEmail={{ customer_email }}"
-    style="width: 100%; height: {{ block.settings.height }}px; border: none;"
-    frameborder="0"
-    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-    loading="lazy"
+    data-pc-url="{{ pc_url }}"
+    data-mobile-url="{{ mobile_url }}"
+    data-shop="{{ shop.permanent_domain }}"
+    data-sso-params="{{ sso_params }}"
+    src="" 
+    style="width: 100%; height: 100%; border: none; min-width: 100vw;" 
+    title="FeedoBridge Embed"
+    allow="geolocation; microphone; camera; payment; autoplay; fullscreen; picture-in-picture"
+    allowfullscreen
   ></iframe>
 </div>
 
 <script>
 (function() {
   const iframe = document.getElementById('feedobridge-iframe-{{ block.id }}');
+  const pcUrl = iframe.getAttribute('data-pc-url');
+  const mobileUrl = iframe.getAttribute('data-mobile-url');
+  const shopDomain = iframe.getAttribute('data-shop');
+  const ssoParams = iframe.getAttribute('data-sso-params');
   
-  window.addEventListener('message', function(event) {
-    const allowedOrigin = new URL('{{ block.settings.embed_url }}').origin;
-    if (event.origin !== allowedOrigin) return;
-
-    if (event.data.type === 'RESIZE' && event.data.height) {
-      iframe.style.height = event.data.height + 'px';
+  // 检测设备类型
+  function isMobileDevice() {
+    // 只根据User-Agent判断，不考虑屏幕宽度
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+  
+  // 构建完整URL
+  function buildUrl(baseUrl) {
+    if (!baseUrl) return '';
+    
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    const deviceType = isMobileDevice() ? 'mobile' : 'desktop';
+    const screenWidth = window.innerWidth || document.documentElement.clientWidth;
+    const screenHeight = window.innerHeight || document.documentElement.clientHeight;
+    
+    let fullUrl = baseUrl + separator + 'shop=' + shopDomain 
+                  + '&device=' + deviceType
+                  + '&platform=shopify'
+                  + '&screenWidth=' + screenWidth
+                  + '&screenHeight=' + screenHeight;
+    
+    if (ssoParams) {
+      fullUrl += ssoParams;
     }
-
-    if (event.data.type === 'SSO_SUCCESS') {
-      console.log('FeedoBridge SSO login successful');
-    }
+    
+    return fullUrl;
+  }
+  
+  // 根据设备类型选择URL
+  function loadIframe() {
+    const isMobile = isMobileDevice();
+    const targetUrl = isMobile ? mobileUrl : pcUrl;
+    const finalUrl = buildUrl(targetUrl);
+    
+    console.log('FeedoBridge: 设备类型 -', isMobile ? '移动端' : 'PC端');
+    console.log('FeedoBridge: 加载URL -', finalUrl);
+    
+    iframe.src = finalUrl;
+  }
+  
+  // 初始加载
+  loadIframe();
+  
+  // 监听窗口大小变化（如果从PC切换到移动视图）
+  let resizeTimeout;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(function() {
+      const currentSrc = iframe.src;
+      const newUrl = buildUrl(isMobileDevice() ? mobileUrl : pcUrl);
+      
+      // 只在URL变化时重新加载
+      if (currentSrc !== newUrl) {
+        console.log('FeedoBridge: 设备类型变化，重新加载');
+        loadIframe();
+      }
+    }, 500);
   });
 
+  // 监听 iframe 加载完成
   iframe.addEventListener('load', function() {
-    {% if customer %}
-    iframe.contentWindow.postMessage({
-      type: 'SHOPIFY_CUSTOMER_DATA',
-      customerId: '{{ customer_id }}',
-      customerEmail: '{{ customer_email }}',
-      customerName: '{{ customer.name }}'
-    }, allowedOrigin);
+    console.log('FeedoBridge: 内容加载成功');
+    
+    // 如果启用了 SSO，发送客户数据
+    {% if block.settings.enable_sso and customer %}
+    try {
+      const targetOrigin = new URL(iframe.src).origin;
+      iframe.contentWindow.postMessage({
+        type: 'SHOPIFY_CUSTOMER_DATA',
+        customerId: '{{ customer_id }}',
+        customerEmail: '{{ customer_email }}',
+        customerName: '{{ customer.name }}',
+        shopDomain: '{{ shop.permanent_domain }}',
+        deviceType: isMobileDevice() ? 'mobile' : 'pc'
+      }, targetOrigin);
+      console.log('FeedoBridge: SSO 数据已发送');
+    } catch (e) {
+      console.warn('FeedoBridge: 无法发送 SSO 数据', e);
+    }
     {% endif %}
+  });
+
+  // 监听来自嵌入网站的消息
+  window.addEventListener('message', function(event) {
+    // 验证消息来源
+    try {
+      if (!iframe.src) return;
+      const allowedOrigin = new URL(iframe.src).origin;
+      if (event.origin !== allowedOrigin) return;
+
+      // 处理高度调整
+      if (event.data.type === 'RESIZE' && event.data.height) {
+        iframe.style.height = event.data.height + 'px';
+        console.log('FeedoBridge: 高度已调整为', event.data.height);
+      }
+
+      // 处理 SSO 成功回调
+      if (event.data.type === 'SSO_SUCCESS') {
+        console.log('FeedoBridge: SSO 登录成功');
+      }
+    } catch (e) {
+      // 忽略无效消息
+    }
   });
 })();
 </script>
 
 <style>
 .feedobridge-embed-container {
-  width: 100%;
-  margin: 20px 0;
-  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100vw !important;
+  height: 90vh !important;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+}
+
+.feedobridge-embed-container iframe {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 @media (max-width: 768px) {
-  .feedobridge-embed-container iframe {
-    height: auto;
-    min-height: 400px;
+  .feedobridge-embed-container {
+    height: 90vh !important;
   }
 }
 </style>
@@ -68,26 +179,25 @@
   "target": "section",
   "settings": [
     {
-      "type": "url",
-      "id": "embed_url",
-      "label": "Embed URL",
-      "default": "https://shopifyapp.xmasforest.com"
+      "type": "text",
+      "id": "embed_url_pc",
+      "label": "PC端网站地址",
+      "info": "PC端显示的网站URL，例如：https://feedogocloud.com",
+      "default": "https://feedogocloud.com"
     },
     {
-      "type": "range",
-      "id": "height",
-      "min": 400,
-      "max": 1200,
-      "step": 50,
-      "unit": "px",
-      "label": "Height",
-      "default": 600
+      "type": "text",
+      "id": "embed_url_mobile",
+      "label": "移动端网站地址",
+      "info": "移动端显示的网站URL，如果留空则使用PC端地址",
+      "default": "https://feedogocloud.com"
     },
     {
       "type": "checkbox",
       "id": "enable_sso",
-      "label": "Enable SSO Login",
-      "default": true
+      "label": "启用单点登录 (SSO)",
+      "info": "启用后会自动传递客户信息到嵌入的网站",
+      "default": false
     }
   ]
 }

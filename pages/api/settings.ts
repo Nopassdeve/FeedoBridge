@@ -42,6 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       feedogoSsoSecret
     } = req.body;
 
+    console.log('Received thankYouModalConfig:', JSON.stringify(thankYouModalConfig, null, 2));
+
     const shopRecord = await prisma.shop.findUnique({
       where: { shopifyShopId: shop }
     });
@@ -74,6 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         feedogoSsoSecret
       }
     });
+
+    console.log('Saved settings:', JSON.stringify(updated, null, 2));
 
     return res.status(200).json(updated);
   }

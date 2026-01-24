@@ -1,0 +1,8 @@
+{
+  "name": "FeedoBridge Embed",
+  "blocks": {
+    "feedobridge_embed": {
+      "name": "FeedoBridge Embed"
+    }
+  }
+}

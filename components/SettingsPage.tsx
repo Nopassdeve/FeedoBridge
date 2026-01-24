@@ -88,24 +88,26 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
         const response = await fetch(`/api/settings?shop=${shopId}`);
         const data = await response.json();
         
+        console.log('Loaded settings:', data);
+        
         setUrl(data.embeddedIframeUrl || 'https://feedogocloud.com');
         setEmbedHeight(data.embedHeight || 600);
         setAutoRegister(data.enableAutoRegister ?? true);
         setEnableSso(data.enableSso ?? true);
         
-        if (data.thankYouModalConfig) {
-          setThankYouModalConfig({
-            enabled: data.thankYouModalConfig.enabled ?? false,
-            title: data.thankYouModalConfig.title || '',
-            description: data.thankYouModalConfig.description || '',
-            buttonText: data.thankYouModalConfig.buttonText || '',
-            buttonLink: data.thankYouModalConfig.buttonLink || '',
-            backgroundColor: data.thankYouModalConfig.backgroundColor || '#ffffff',
-            textColor: data.thankYouModalConfig.textColor || '#000000',
-            buttonColor: data.thankYouModalConfig.buttonColor || '#000000',
-            showDelay: data.thankYouModalConfig.showDelay || 1000
-          });
-        }
+        // 始终设置 thankYouModalConfig，即使是 null 或空对象
+        const modalConfig = data.thankYouModalConfig || {};
+        setThankYouModalConfig({
+          enabled: modalConfig.enabled ?? false,
+          title: modalConfig.title || '',
+          description: modalConfig.description || '',
+          buttonText: modalConfig.buttonText || '',
+          buttonLink: modalConfig.buttonLink || '',
+          backgroundColor: modalConfig.backgroundColor || '#ffffff',
+          textColor: modalConfig.textColor || '#000000',
+          buttonColor: modalConfig.buttonColor || '#000000',
+          showDelay: modalConfig.showDelay ?? 1000
+        });
 
         if (data.feedogoApiKey || data.feedogoWebhookUrl || data.feedogoSsoSecret) {
           setApiConfig({
@@ -115,6 +117,7 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
           });
         }
       } catch (err) {
+        console.error('Failed to load settings:', err);
         setError('加载设置失败');
       } finally {
         setLoading(false);
@@ -129,25 +132,33 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
     setSaved(false);
     setError(null);
 
+    const saveData = {
+      embeddedIframeUrl: url,
+      embedHeight,
+      enableAutoRegister: autoRegister,
+      enableSso,
+      thankYouModalConfig,
+      feedogoApiKey: apiConfig.feedogoApiKey,
+      feedogoWebhookUrl: apiConfig.feedogoWebhookUrl,
+      feedogoSsoSecret: apiConfig.feedogoSsoSecret
+    };
+
+    console.log('Saving data:', saveData);
+
     try {
-      await fetch(`/api/settings?shop=${shopId}`, {
+      const response = await fetch(`/api/settings?shop=${shopId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          embeddedIframeUrl: url,
-          embedHeight,
-          enableAutoRegister: autoRegister,
-          enableSso,
-          thankYouModalConfig,
-          feedogoApiKey: apiConfig.feedogoApiKey,
-          feedogoWebhookUrl: apiConfig.feedogoWebhookUrl,
-          feedogoSsoSecret: apiConfig.feedogoSsoSecret
-        })
+        body: JSON.stringify(saveData)
       });
+
+      const result = await response.json();
+      console.log('Save result:', result);
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
+      console.error('Save error:', err);
       setError('保存设置失败');
     } finally {
       setSaving(false);

@@ -8,16 +8,17 @@ datasource db {
 }
 
 model Shop {
-  id              String   @id @default(uuid())
-  shopifyShopId   String   @unique
-  shopName        String
-  accessToken     String
-  apiVersion      String   @default("2024-01")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  settings        AppSetting?
-  userMappings    UserMapping[]
-  orderLogs       OrderPushLog[]
+  id                    String   @id @default(uuid())
+  shopifyShopId         String   @unique
+  shopName              String
+  accessToken           String
+  apiVersion            String   @default("2024-01")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  settings              AppSetting?
+  userMappings          UserMapping[]
+  orderLogs             OrderPushLog[]
+  thankYouModalEvents   ThankYouModalEvent[]
 }
 
 model AppSetting {
@@ -65,4 +66,20 @@ model OrderPushLog {
 
   @@index([shopifyOrderId])
   @@index([status])
+}
+
+model ThankYouModalEvent {
+  id               String   @id @default(uuid())
+  shopId           String
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId          String
+  eventType        String   // 'shown', 'clicked', 'closed'
+  buttonLink       String?
+  userAgent        String?
+  ipAddress        String?
+  createdAt        DateTime @default(now())
+
+  @@index([orderId])
+  @@index([eventType])
+  @@index([shopId])
 }

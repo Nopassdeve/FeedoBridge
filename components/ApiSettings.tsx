@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, Text, BlockStack, TextField, Button, InlineStack, Badge, Banner } from '@shopify/polaris';
+import { Card, Text, BlockStack, TextField, Button, InlineStack, Badge } from '@shopify/polaris';
 
 interface ApiConfig {
   feedogoApiKey: string;
@@ -54,13 +54,14 @@ export default function ApiSettings({ config, onChange, onTest }: ApiSettingsPro
           </InlineStack>
 
           {testResult && (
-            <Banner
-              title={testResult.success ? '连接成功' : '连接失败'}
-              tone={testResult.success ? 'success' : 'critical'}
-              onDismiss={() => setTestResult(null)}
-            >
-              <p>{testResult.message}</p>
-            </Banner>
+            <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: testResult.success ? '#dbedf5' : '#fed7d7', borderLeft: `4px solid ${testResult.success ? '#0082c3' : '#c81e1e'}` }}>
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                {testResult.success ? '✅ 连接成功' : '❌ 连接失败'}
+              </Text>
+              <Text as="p" variant="bodySm">
+                {testResult.message}
+              </Text>
+            </div>
           )}
 
           <div>

@@ -17,7 +17,18 @@ api_version = "2024-01"
 [pos]
 embedded = false
 
-[[app_proxy]]
+[app_proxy]
 url = "https://shopifyapp.xmasforest.com/proxy"
 subpath = "feedobridge"
 prefix = "apps"
+
+[[extensions]]
+type = "theme"
+name = "FeedoBridge Theme Extension"
+handle = "feedobridge-theme-extension"
+
+[[extensions]]
+type = "checkout_ui_extension"
+name = "Thank You Modal"
+handle = "thank-you-modal"
+

@@ -1,41 +1,7 @@
-{
-  "schemaVersion": "1.0",
-  "name": "feedobridge-app-embed",
-  "type": "theme_app_extension",
-  "extensions": [
-    {
-      "type": "app_block",
-      "name": "FeedoBridge Embed",
-      "blocks": [
-        {
-          "type": "feedobridge_embed",
-          "name": "FeedoBridge Embed Block",
-          "settings": [
-            {
-              "type": "url",
-              "id": "embed_url",
-              "label": "Embed URL",
-              "default": "https://feedogocloud.com"
-            },
-            {
-              "type": "range",
-              "id": "height",
-              "min": 400,
-              "max": 1200,
-              "step": 50,
-              "unit": "px",
-              "label": "Height",
-              "default": 600
-            },
-            {
-              "type": "checkbox",
-              "id": "enable_sso",
-              "label": "Enable SSO Login",
-              "default": true
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
+api_version = "2024-01"
+
+[[extensions]]
+uid = "1f930a24-20a1-f38c-ebae-ba649cdb455b39b7b8ba"
+type = "theme"
+name = "FeedoBridge Theme Extension"
+handle = "feedobridge-theme-extension"

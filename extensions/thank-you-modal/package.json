@@ -1,0 +1,20 @@
+{
+  "name": "@feedobridge/thank-you-modal",
+  "version": "1.0.0",
+  "description": "Thank you page modal extension for Shopify checkout",
+  "author": "NopassDev",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.jsx",
+  "exports": {
+    ".": "./src/index.jsx"
+  },
+  "dependencies": {
+    "@shopify/checkout-ui-extensions-react": "^0.21.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@shopify/cli": "^3.55.0"
+  }
+}
