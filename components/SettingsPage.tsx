@@ -17,7 +17,17 @@ import {
 } from '@shopify/polaris';
 import DashboardStats from './DashboardStats';
 import EmbedPreview from './EmbedPreview';
+import ThankYouModalSettings from './ThankYouModalSettings';
 import ApiSettings from './ApiSettings';
+
+interface ThankYouModalConfig {
+  enabled: boolean;
+  title: string;
+  description: string;
+  couponCode: string;
+  buttonText: string;
+  buttonLink: string;
+}
 
 interface ApiConfig {
   feedogoApiKey: string;
@@ -42,6 +52,16 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
   const [autoRegister, setAutoRegister] = useState(true);
   const [enableSso, setEnableSso] = useState(true);
 
+  // 感谢页面弹窗配置
+  const [thankYouModalConfig, setThankYouModalConfig] = useState<ThankYouModalConfig>({
+    enabled: false,
+    title: '',
+    description: '',
+    couponCode: '',
+    buttonText: '',
+    buttonLink: ''
+  });
+
   // API 配置
   const [apiConfig, setApiConfig] = useState<ApiConfig>({
     feedogoApiKey: '',
@@ -52,6 +72,7 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
   const tabs = [
     { id: 'dashboard', content: '仪表盘', accessibilityLabel: '仪表盘' },
     { id: 'embed', content: '嵌入设置', accessibilityLabel: '嵌入设置' },
+    { id: 'thankyou', content: '感谢页面', accessibilityLabel: '感谢页面弹窗' },
     { id: 'api', content: 'API 配置', accessibilityLabel: 'API 配置' },
   ];
 
@@ -67,6 +88,17 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
         setEmbedHeight(data.embedHeight || 600);
         setAutoRegister(data.enableAutoRegister ?? true);
         setEnableSso(data.enableSso ?? true);
+
+        if (data.thankYouModalConfig) {
+          setThankYouModalConfig({
+            enabled: data.thankYouModalConfig.enabled ?? false,
+            title: data.thankYouModalConfig.title || '',
+            description: data.thankYouModalConfig.description || '',
+            couponCode: data.thankYouModalConfig.couponCode || '',
+            buttonText: data.thankYouModalConfig.buttonText || '',
+            buttonLink: data.thankYouModalConfig.buttonLink || ''
+          });
+        }
 
         if (data.feedogoApiKey || data.feedogoWebhookUrl || data.feedogoSsoSecret) {
           setApiConfig({
@@ -96,6 +128,7 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
       embedHeight,
       enableAutoRegister: autoRegister,
       enableSso,
+      thankYouModalConfig,
       feedogoApiKey: apiConfig.feedogoApiKey,
       feedogoWebhookUrl: apiConfig.feedogoWebhookUrl,
       feedogoSsoSecret: apiConfig.feedogoSsoSecret
@@ -233,8 +266,16 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
                 </BlockStack>
               )}
 
-              {/* API 配置 */}
+              {/* 感谢页面弹窗 */}
               {selectedTab === 2 && (
+                <ThankYouModalSettings
+                  config={thankYouModalConfig}
+                  onChange={setThankYouModalConfig}
+                />
+              )}
+
+              {/* API 配置 */}
+              {selectedTab === 3 && (
                 <ApiSettings
                   config={apiConfig}
                   onChange={setApiConfig}

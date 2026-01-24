@@ -1,0 +1,13 @@
+{
+  "name": "thank-you-modal",
+  "version": "1.0.0",
+  "description": "FeedoBridge Thank You Page Extension",
+  "dependencies": {
+    "@shopify/ui-extensions-react": "2025.7.3",
+    "react": "^18.2.0",
+    "react-reconciler": "^0.29.0"
+  },
+  "devDependencies": {
+    "@shopify/cli": "3.69.4"
+  }
+}

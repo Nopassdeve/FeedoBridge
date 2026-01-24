@@ -1,0 +1,14 @@
+api_version = "2025-10"
+
+[[extensions]]
+uid = "f09a6ea5-5adc-0ef3-1084-d142accb9b277238c82a"
+type = "ui_extension"
+name = "Thank You Modal"
+handle = "thank-you-modal"
+
+[[extensions.targeting]]
+target = "purchase.thank-you.block.render"
+module = "./src/index.jsx"
+
+[extensions.capabilities]
+block_progress = true
