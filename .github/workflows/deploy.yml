@@ -19,19 +19,9 @@ jobs:
           script: |
             cd /opt/feedobridge
             
-            # 使用 token 拉取代码（避免认证失败）
-            git config --global credential.helper store
-            echo "https://${{ secrets.GH_TOKEN }}@github.com" > ~/.git-credentials
-            
-            # 确保使用 HTTPS URL
-            git remote set-url origin https://github.com/Nopassdeve/FeedoBridge.git
-            
-            # 拉取最新代码
-            git fetch origin main
-            git reset --hard origin/main
+            # 直接在 URL 中使用 token（最可靠的方法）
+            git fetch https://${{ secrets.GH_TOKEN }}@github.com/Nopassdeve/FeedoBridge.git main
+            git reset --hard FETCH_HEAD
             
             # 重启应用
             docker compose restart app
-            
-            # 清理凭据
-            rm ~/.git-credentials
