@@ -67,20 +67,6 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
         setEmbedHeight(data.embedHeight || 600);
         setAutoRegister(data.enableAutoRegister ?? true);
         setEnableSso(data.enableSso ?? true);
-        
-        // 始终设置 thankYouModalConfig，即使是 null 或空对象
-        const modalConfig = data.thankYouModalConfig || {};
-        setThankYouModalConfig({
-          enabled: modalConfig.enabled ?? false,
-          title: modalConfig.title || '',
-          description: modalConfig.description || '',
-          buttonText: modalConfig.buttonText || '',
-          buttonLink: modalConfig.buttonLink || '',
-          backgroundColor: modalConfig.backgroundColor || '#ffffff',
-          textColor: modalConfig.textColor || '#000000',
-          buttonColor: modalConfig.buttonColor || '#000000',
-          showDelay: modalConfig.showDelay ?? 1000
-        });
 
         if (data.feedogoApiKey || data.feedogoWebhookUrl || data.feedogoSsoSecret) {
           setApiConfig({
@@ -110,7 +96,6 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
       embedHeight,
       enableAutoRegister: autoRegister,
       enableSso,
-      thankYouModalConfig,
       feedogoApiKey: apiConfig.feedogoApiKey,
       feedogoWebhookUrl: apiConfig.feedogoWebhookUrl,
       feedogoSsoSecret: apiConfig.feedogoSsoSecret
