@@ -1,9 +1,0 @@
-
-uid = "f09a6ea5-5adc-0ef3-1084-d142accb9b277238c82a"
-type = "ui_extension"
-api_version = "2026-01"
-name = "Thank You Modal"
-
-[[targeting]]
-target = "purchase.thank-you.customer-information.render-after"
-module = "./src/index.jsx"

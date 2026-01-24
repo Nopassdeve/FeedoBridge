@@ -27,8 +27,3 @@ type = "theme"
 name = "FeedoBridge Theme Extension"
 handle = "feedobridge-theme-extension"
 
-[[extensions]]
-type = "checkout_ui_extension"
-name = "Thank You Modal"
-handle = "thank-you-modal"
-

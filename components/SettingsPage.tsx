@@ -17,20 +17,7 @@ import {
 } from '@shopify/polaris';
 import DashboardStats from './DashboardStats';
 import EmbedPreview from './EmbedPreview';
-import ThankYouModalSettings from './ThankYouModalSettings';
 import ApiSettings from './ApiSettings';
-
-interface ThankYouModalConfig {
-  enabled: boolean;
-  title: string;
-  description: string;
-  buttonText: string;
-  buttonLink: string;
-  backgroundColor: string;
-  textColor: string;
-  buttonColor: string;
-  showDelay: number;
-}
 
 interface ApiConfig {
   feedogoApiKey: string;
@@ -55,19 +42,6 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
   const [autoRegister, setAutoRegister] = useState(true);
   const [enableSso, setEnableSso] = useState(true);
 
-  // 感谢页面弹窗配置
-  const [thankYouModalConfig, setThankYouModalConfig] = useState<ThankYouModalConfig>({
-    enabled: false,
-    title: '',
-    description: '',
-    buttonText: '',
-    buttonLink: '',
-    backgroundColor: '#ffffff',
-    textColor: '#000000',
-    buttonColor: '#000000',
-    showDelay: 1000
-  });
-
   // API 配置
   const [apiConfig, setApiConfig] = useState<ApiConfig>({
     feedogoApiKey: '',
@@ -78,7 +52,6 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
   const tabs = [
     { id: 'dashboard', content: '仪表盘', accessibilityLabel: '仪表盘' },
     { id: 'embed', content: '嵌入设置', accessibilityLabel: '嵌入设置' },
-    { id: 'thankyou', content: '感谢页面', accessibilityLabel: '感谢页面弹窗' },
     { id: 'api', content: 'API 配置', accessibilityLabel: 'API 配置' },
   ];
 
@@ -275,16 +248,8 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
                 </BlockStack>
               )}
 
-              {/* 感谢页面弹窗 */}
-              {selectedTab === 2 && (
-                <ThankYouModalSettings
-                  config={thankYouModalConfig}
-                  onChange={setThankYouModalConfig}
-                />
-              )}
-
               {/* API 配置 */}
-              {selectedTab === 3 && (
+              {selectedTab === 2 && (
                 <ApiSettings
                   config={apiConfig}
                   onChange={setApiConfig}
