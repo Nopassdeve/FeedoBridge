@@ -50,7 +50,7 @@ export default function ApiSettings({ config, onChange, onTest }: ApiSettingsPro
         <BlockStack gap="400">
           <InlineStack align="space-between">
             <Text as="h3" variant="headingMd">FeedoGo API 配置</Text>
-            <Badge tone="info">需要与 FeedoGo 团队获取</Badge>
+            <Badge tone="info">仅需填写基础URL</Badge>
           </InlineStack>
 
           {testResult && (
@@ -64,9 +64,18 @@ export default function ApiSettings({ config, onChange, onTest }: ApiSettingsPro
             </div>
           )}
 
+          <TextField
+            label="FeedoGo Base URL"
+            value={config.feedogoWebhookUrl}
+            onChange={(val) => handleChange('feedogoWebhookUrl', val)}
+            autoComplete="off"
+            placeholder="https://shop.feedogocloud.com"
+            helpText="FeedoGo 的基础URL地址（必填）"
+          />
+
           <div>
             <InlineStack align="space-between">
-              <Text as="span" variant="bodySm">API 密钥</Text>
+              <Text as="span" variant="bodySm">API 密钥（可选）</Text>
               <Button
                 variant="plain"
                 onClick={() => setShowApiKey(!showApiKey)}
@@ -81,24 +90,15 @@ export default function ApiSettings({ config, onChange, onTest }: ApiSettingsPro
                 value={showApiKey ? config.feedogoApiKey : maskValue(config.feedogoApiKey)}
                 onChange={(val) => handleChange('feedogoApiKey', val)}
                 autoComplete="off"
-                placeholder="输入 FeedoGo API Key"
+                placeholder="留空即可（FeedoGo API不需要密钥）"
                 type={showApiKey ? 'text' : 'password'}
               />
             </div>
           </div>
 
-          <TextField
-            label="Webhook URL"
-            value={config.feedogoWebhookUrl}
-            onChange={(val) => handleChange('feedogoWebhookUrl', val)}
-            autoComplete="off"
-            placeholder="https://feedogocloud.com/api/v1/webhooks/shopify"
-            helpText="FeedoGo 接收 Shopify 数据的 Webhook 地址"
-          />
-
           <div>
             <InlineStack align="space-between">
-              <Text as="span" variant="bodySm">SSO 密钥</Text>
+              <Text as="span" variant="bodySm">SSO 密钥（可选）</Text>
               <Button
                 variant="plain"
                 onClick={() => setShowSsoSecret(!showSsoSecret)}
@@ -113,9 +113,9 @@ export default function ApiSettings({ config, onChange, onTest }: ApiSettingsPro
                 value={showSsoSecret ? config.feedogoSsoSecret : maskValue(config.feedogoSsoSecret)}
                 onChange={(val) => handleChange('feedogoSsoSecret', val)}
                 autoComplete="off"
-                placeholder="输入 SSO 签名密钥"
+                placeholder="留空即可（使用邮箱自动登录）"
                 type={showSsoSecret ? 'text' : 'password'}
-                helpText="用于生成 SSO 登录签名"
+                helpText="仅在使用SSO降级方案时需要"
               />
             </div>
           </div>

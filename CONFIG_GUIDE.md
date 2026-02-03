@@ -12,19 +12,21 @@
 
 **填写内容**:
 ```
-https://shop.feedogocloud.com/webhooks/shopify
+https://shop.feedogocloud.com
 ```
 
 **说明**:
 - 这是最重要的配置，必须填写
-- 系统会自动从这个URL提取基础地址：`https://shop.feedogocloud.com`
-- 用于拼接所有FeedoGo API端点：
-  - `/api/user/emailLogin` - 邮箱登录
+- 这是FeedoGo的基础URL地址
+- 系统会自动拼接API路径：
+  - `/api/user/emailLogin` - 邮箱登录（自动注册新用户）
   - `/api/user/exchangeLoveCoin` - 爱心币兑换
   - `/api/user/profile` - 修改用户信息
   - `/api/common/upload` - 上传文件
 
-**重要**: 必须包含 `/webhooks/shopify` 后缀！
+**注意**: 
+- ✅ 正确：`https://shop.feedogocloud.com`
+- ❌ 错误：`https://shop.feedogocloud.com/webhooks/shopify`
 
 ---
 
@@ -64,8 +66,8 @@ https://shop.feedogocloud.com/webhooks/shopify
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  FeedoGo Webhook URL (必填):                    │
-│  https://shop.feedogocloud.com/webhooks/shopify │
+│  FeedoGo Base URL (必填):                       │
+│  https://shop.feedogocloud.com                  │
 ├─────────────────────────────────────────────────┤
 │  FeedoGo API Key (可选):                        │
 │  [留空]                                         │
@@ -142,10 +144,10 @@ https://shopifyapp.xmasforest.com/test-order-sync?shop=yourstore.myshopify.com
 
 ## 🚨 常见问题
 
-### Q1: Webhook URL 填写错误会怎样？
+### Q1: Base URL 填写错误会怎样？
 
 **现象**: 所有功能都无法正常工作
-**解决**: 确保URL格式正确，必须是 `https://shop.feedogocloud.com/webhooks/shopify`
+**解决**: 确保URL格式正确，应该是 `https://shop.feedogocloud.com`（不要加 /webhooks/shopify）
 
 ### Q2: API Key 留空会影响功能吗？
 
@@ -172,7 +174,7 @@ https://shopifyapp.xmasforest.com/test-order-sync?shop=yourstore.myshopify.com
 
 | 配置项 | 对应功能 | 是否必需 |
 |--------|---------|---------|
-| Webhook URL | 所有FeedoGo API调用 | ✅ 必需 |
+| Base URL | 所有FeedoGo API调用 | ✅ 必需 |
 | API Key | 无（不使用） | ❌ 可选 |
 | SSO Secret | SSO降级登录 | ❌ 可选 |
 | Auto Register | 自动记录用户 | ✅ 建议启用 |
@@ -197,9 +199,9 @@ https://shopifyapp.xmasforest.com/test-order-sync?shop=yourstore.myshopify.com
 
 ## 💡 最佳实践
 
-1. **必须配置 Webhook URL**
+1. **必须配置 Base URL**
    ```
-   https://shop.feedogocloud.com/webhooks/shopify
+   https://shop.feedogocloud.com
    ```
 
 2. **启用自动注册和SSO**
@@ -216,10 +218,10 @@ https://shopifyapp.xmasforest.com/test-order-sync?shop=yourstore.myshopify.com
 ## 📞 技术支持
 
 如果配置后仍有问题，请提供：
-1. Webhook URL配置
+1. Base URL配置
 2. 错误信息截图
 3. 服务器日志（如有权限）
 
 ---
 
-**总结**: 只需要填写 **Webhook URL** 即可，其他字段都可以留空！
+**总结**: 只需要填写 **https://shop.feedogocloud.com** 即可，其他字段都可以留空！

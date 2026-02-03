@@ -72,9 +72,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const feedogoBaseUrl = webhookUrl.replace('/webhooks/shopify', '');
+    const feedogoBaseUrl = webhookUrl;
 
-    // 1. 检查用户是否已在 FeedoGo 注册
+    // 1. 检查用户是否在 FeedoGo 注册（emailLogin会自动注册新用户）
     let userExists = false;
     try {
       const checkResponse = await axios.post(

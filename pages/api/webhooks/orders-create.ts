@@ -78,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const feedogoBaseUrl = webhookUrl.replace('/webhooks/shopify', '');
+    const feedogoBaseUrl = webhookUrl;
     
     // 提取订单金额（转换为数字）
     const orderAmount = parseFloat(order.total_price);

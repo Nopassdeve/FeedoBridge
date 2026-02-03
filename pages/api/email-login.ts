@@ -6,9 +6,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, feedogoWebhookUrl } = req.body;
+  const { email, feedogoBaseUrl } = req.body;
 
-  if (!email || !feedogoWebhookUrl) {
+  if (!email || !feedogoBaseUrl) {
     return res.status(400).json({
       success: false,
       message: '邮箱和 FeedoGo 地址为必填项'
@@ -16,9 +16,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 调用 FeedoGo 邮箱登录接口
+    // 调用 FeedoGo 邮箱登录接口（会自动注册新用户）
     const response = await axios.post(
-      `${feedogoWebhookUrl.replace('/webhooks/shopify', '')}/api/user/emailLogin`,
+      `${feedogoBaseUrl}/api/user/emailLogin`,
       { email },
       {
         timeout: 10000,

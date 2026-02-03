@@ -56,7 +56,7 @@ export default function EmbeddedIframe({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               email: customerEmail,
-              feedogoWebhookUrl 
+              feedogoBaseUrl: feedogoWebhookUrl 
             })
           });
 

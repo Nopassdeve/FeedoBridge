@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const feedogoBaseUrl = webhookUrl.replace('/webhooks/shopify', '');
+    const feedogoBaseUrl = webhookUrl;
 
     // 1. 先检查用户是否存在
     let userExists = false;

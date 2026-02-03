@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const feedogoBaseUrl = webhookUrl.replace('/webhooks/shopify', '');
+    const feedogoBaseUrl = webhookUrl;
 
     // 如果指定了邮箱，只同步该客户
     if (customerEmail) {
