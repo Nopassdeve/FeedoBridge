@@ -21,17 +21,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const webhooks = [
       {
         topic: 'app/uninstalled',
-        address: `${process.env.HOST}/api/webhooks/app-uninstalled`,
+        address: `${process.env.APP_URL || process.env.HOST}/api/webhooks/app-uninstalled`,
         format: 'json'
       },
       {
         topic: 'orders/create',
-        address: `${process.env.HOST}/api/webhooks/orders-create`,
+        address: `${process.env.APP_URL || process.env.HOST}/api/webhooks/order-auto-register`,
         format: 'json'
       },
       {
         topic: 'customers/create',
-        address: `${process.env.HOST}/api/webhooks/customers-create`,
+        address: `${process.env.APP_URL || process.env.HOST}/api/webhooks/customers-create`,
         format: 'json'
       }
     ];
