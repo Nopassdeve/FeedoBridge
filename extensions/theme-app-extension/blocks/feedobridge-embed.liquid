@@ -1,9 +1,10 @@
-{% if block.settings.enable_sso and customer %}
+{% comment %} 如果客户已登录，传递客户信息 {% endcomment %}
+{% if customer %}
   {% assign customer_id = customer.id %}
   {% assign customer_email = customer.email %}
-  {% assign sso_params = '&customerId=' | append: customer_id | append: '&customerEmail=' | append: customer_email %}
+  {% assign customer_params = '&customerId=' | append: customer_id | append: '&customerEmail=' | append: customer_email %}
 {% else %}
-  {% assign sso_params = '' %}
+  {% assign customer_params = '' %}
 {% endif %}
 
 {% comment %} 构建Next.js应用的embed页面URL {% endcomment %}
@@ -17,7 +18,7 @@
     data-pc-url="{{ pc_url }}"
     data-mobile-url="{{ mobile_url }}"
     data-shop="{{ shop.permanent_domain }}"
-    data-sso-params="{{ sso_params }}"
+    data-customer-params="{{ customer_params }}"
     src="" 
     style="width: 100%; height: 100%; border: none; min-width: 100vw;" 
     title="FeedoBridge Embed"
@@ -32,7 +33,7 @@
   const pcUrl = iframe.getAttribute('data-pc-url');
   const mobileUrl = iframe.getAttribute('data-mobile-url');
   const shopDomain = iframe.getAttribute('data-shop');
-  const ssoParams = iframe.getAttribute('data-sso-params');
+  const customerParams = iframe.getAttribute('data-customer-params');
   
   // 检测设备类型
   function isMobileDevice() {
@@ -55,8 +56,8 @@
                   + '&screenWidth=' + screenWidth
                   + '&screenHeight=' + screenHeight;
     
-    if (ssoParams) {
-      fullUrl += ssoParams;
+    if (customerParams) {
+      fullUrl += customerParams;
     }
     
     return fullUrl;
