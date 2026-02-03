@@ -47,12 +47,11 @@ export default async function handler(
       return res.status(200).json({ success: true, message: 'Auto-register disabled' });
     }
 
-    const apiKey = shop.settings?.feedogoApiKey;
     const webhookUrl = shop.settings?.feedogoWebhookUrl;
 
-    if (!apiKey || !webhookUrl) {
-      console.warn(`API config missing for shop: ${shopDomain}`);
-      return res.status(200).json({ success: true, message: 'API config not complete' });
+    if (!webhookUrl) {
+      console.warn(`FeedoGo Webhook URL not configured for shop: ${shopDomain}`);
+      return res.status(200).json({ success: true, message: 'FeedoGo Webhook URL not configured' });
     }
 
     // 1. 检查用户是否已存在
