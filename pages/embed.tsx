@@ -18,10 +18,28 @@ export default function EmbedPage() {
     async function fetchSettings() {
       if (!shop) return;
       
-      const response = await fetch(`/api/settings?shop=${shop}`);
-      const data: Settings = await response.json();
-      setIframeUrl(data.embeddedIframeUrl);
-      setFeedogoWebhookUrl(data.feedogoWebhookUrl || '');
+      console.log('FeedoBridge Embed: Fetching settings for shop:', shop);
+      
+      try {
+        const response = await fetch(`/api/settings?shop=${shop}`);
+        
+        if (response.ok) {
+          const data: Settings = await response.json();
+          console.log('FeedoBridge Embed: Settings loaded:', data);
+          setIframeUrl(data.embeddedIframeUrl);
+          setFeedogoWebhookUrl(data.feedogoWebhookUrl || '');
+        } else {
+          // 如果商店未找到，使用默认值
+          console.warn('FeedoBridge Embed: Shop not found in database, using defaults');
+          setIframeUrl('https://shop.feedogocloud.com');
+          setFeedogoWebhookUrl('https://shop.feedogocloud.com');
+        }
+      } catch (error) {
+        console.error('FeedoBridge Embed: Failed to fetch settings:', error);
+        // 出错时使用默认值
+        setIframeUrl('https://shop.feedogocloud.com');
+        setFeedogoWebhookUrl('https://shop.feedogocloud.com');
+      }
     }
 
     fetchSettings();
