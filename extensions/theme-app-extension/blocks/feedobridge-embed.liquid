@@ -6,17 +6,10 @@
   {% assign sso_params = '' %}
 {% endif %}
 
-{% comment %} 确定使用PC还是移动端URL {% endcomment %}
-{% assign pc_url = block.settings.embed_url_pc %}
-{% assign mobile_url = block.settings.embed_url_mobile %}
-
-{% if pc_url == blank %}
-  {% assign pc_url = block.settings.embed_url_pc %}
-{% endif %}
-
-{% if mobile_url == blank %}
-  {% assign mobile_url = block.settings.embed_url_mobile %}
-{% endif %}
+{% comment %} 构建Next.js应用的embed页面URL {% endcomment %}
+{% assign app_url = 'https://shopifyapp.xmasforest.com/embed' %}
+{% assign pc_url = app_url %}
+{% assign mobile_url = app_url %}
 
 <div id="feedobridge-embed-{{ block.id }}" class="feedobridge-embed-container" style="width: 100%; overflow: hidden; position: relative; -webkit-overflow-scrolling: touch; height: 90vh;">
   <iframe 
