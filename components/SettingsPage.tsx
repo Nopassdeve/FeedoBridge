@@ -8,7 +8,6 @@ import {
   TextField, 
   Checkbox, 
   Button, 
-  Banner,
   Tabs,
   BlockStack,
   Text,
@@ -204,15 +203,33 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
     >
       <BlockStack gap="400">
         {saved && (
-          <Banner tone="success" onDismiss={() => setSaved(false)}>
-            设置已成功保存
-          </Banner>
+          <div style={{ 
+            padding: '12px', 
+            backgroundColor: '#e3f1df', 
+            borderRadius: '6px',
+            border: '1px solid #a3d977',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Text as="p" variant="bodySm">✅ 设置已成功保存</Text>
+            <button onClick={() => setSaved(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+          </div>
         )}
 
         {error && (
-          <Banner tone="critical" onDismiss={() => setError(null)}>
-            {error}
-          </Banner>
+          <div style={{ 
+            padding: '12px', 
+            backgroundColor: '#fde1e1', 
+            borderRadius: '6px',
+            border: '1px solid #ff8080',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Text as="p" variant="bodySm">{error}</Text>
+            <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+          </div>
         )}
 
         <Card padding="0">
@@ -239,29 +256,42 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
                           helpText="将要嵌入的网站地址（例如：https://feedogocloud.com）"
                         />
 
-                        <InlineStack gap="400">
-                          <Checkbox
-                            label="启用自动账户注册"
-                            checked={autoRegister}
-                            onChange={setAutoRegister}
-                            helpText="订单完成后自动在 FeedoGo 创建用户账户"
-                          />
+                        <TextField
+                          label="嵌入高度 (像素)"
+                          value={embedHeight.toString()}
+                          onChange={(val) => setEmbedHeight(parseInt(val) || 600)}
+                          type="number"
+                          min="300"
+                          max="2000"
+                          autoComplete="off"
+                        />
 
-                          <Checkbox
-                            label="启用单点登录 (SSO)"
-                            checked={enableSso}
-                            onChange={setEnableSso}
-                            helpText="允许 Shopify 客户自动登录 FeedoGo"
-                          />
-                        </InlineStack>
+                        <Checkbox
+                          label="启用自动注册"
+                          checked={autoRegister}
+                          onChange={setAutoRegister}
+                          helpText="订单生成时自动在 FeedoGo 注册客户账户"
+                        />
+
+                        <Checkbox
+                          label="启用邮箱登录（推荐）"
+                          checked={enableSso}
+                          onChange={setEnableSso}
+                          helpText="用户可直接通过邮箱在 FeedoGo 平台自动登录"
+                        />
                       </BlockStack>
                     </div>
                   </Card>
 
+                  {/* 预览 */}
                   <EmbedPreview 
                     url={url} 
-                    height={embedHeight}
-                    onHeightChange={setEmbedHeight}
+                    embedHeight={embedHeight}
+                    feedogoWebhookUrl={apiConfig.feedogoWebhookUrl}
+                    onChange={(newUrl, newHeight) => {
+                      setUrl(newUrl);
+                      setEmbedHeight(newHeight);
+                    }}
                   />
                 </BlockStack>
               )}

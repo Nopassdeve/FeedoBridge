@@ -5,11 +5,17 @@ import { Card, Text, BlockStack, Button, InlineStack, TextField, Select, RangeSl
 
 interface EmbedPreviewProps {
   url: string;
-  height: number;
-  onHeightChange: (height: number) => void;
+  embedHeight: number;
+  feedogoWebhookUrl?: string;
+  onChange: (url: string, embedHeight: number) => void;
 }
 
-export default function EmbedPreview({ url, height, onHeightChange }: EmbedPreviewProps) {
+export default function EmbedPreview({ 
+  url, 
+  embedHeight, 
+  feedogoWebhookUrl,
+  onChange 
+}: EmbedPreviewProps) {
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showPreview, setShowPreview] = useState(false);
 
@@ -53,16 +59,29 @@ export default function EmbedPreview({ url, height, onHeightChange }: EmbedPrevi
             
             <div style={{ flex: 1 }}>
               <RangeSlider
-                label={`高度: ${height}px`}
-                value={height}
+                label={`高度: ${embedHeight}px`}
+                value={embedHeight}
                 min={300}
                 max={1200}
                 step={50}
-                onChange={(val) => onHeightChange(val as number)}
+                onChange={(val) => onChange(url, val as number)}
                 output
               />
             </div>
           </InlineStack>
+
+          {feedogoWebhookUrl && (
+            <div style={{ 
+              padding: '12px', 
+              backgroundColor: '#e3f1df', 
+              borderRadius: '6px',
+              border: '1px solid #a3d977'
+            }}>
+              <Text as="p" variant="bodySm" tone="subdued">
+                ✅ 已配置 FeedoGo Webhook URL，支持邮箱自动登录
+              </Text>
+            </div>
+          )}
 
           {showPreview && (
             <div 
@@ -101,7 +120,7 @@ export default function EmbedPreview({ url, height, onHeightChange }: EmbedPrevi
                   src={url || 'about:blank'}
                   style={{
                     width: '100%',
-                    height: `${height}px`,
+                    height: `${embedHeight}px`,
                     border: 'none',
                     borderRadius: '0 0 8px 8px',
                     backgroundColor: '#fff'
@@ -129,7 +148,7 @@ export default function EmbedPreview({ url, height, onHeightChange }: EmbedPrevi
 {`<div id="feedobridge-embed">
   <iframe
     src="${url || 'https://feedogocloud.com'}"
-    style="width: 100%; height: ${height}px; border: none;"
+    style="width: 100%; height: ${embedHeight}px; border: none;"
     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
   ></iframe>
 </div>`}
