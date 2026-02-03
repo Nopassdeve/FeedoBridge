@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       {
         topic: 'orders/create',
-        address: `${process.env.APP_URL || process.env.HOST}/api/webhooks/order-auto-register`,
+        address: `${process.env.APP_URL || process.env.HOST}/api/webhooks/orders-create`,
         format: 'json'
       },
       {

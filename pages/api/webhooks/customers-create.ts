@@ -95,144 +95,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log(`用户不存在或检查失败，继续注册流程: ${error.message}`);
     }
 
-    // 2. 如果用户不存在，自动注册到 FeedoGo
-    if (!userExists) {
-      try {
-        console.log(`📝 开始注册用户到 FeedoGo: ${customer.email}`);
-        
-        // 调用 FeedoGo 注册接口（需要确认实际的API）
-        const registerResponse = await axios.post(
-          `${feedogoBaseUrl}/api/user/register`,
-          {
-            email: customer.email,
-            username: customer.email.split('@')[0], // 使用邮箱前缀作为用户名
-            nickname: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || customer.email.split('@')[0],
-            mobile: customer.phone || '',
-            source: 'shopify',
-            shopify_customer_id: customer.id.toString(),
-            shopify_store: shopDomain,
-          },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 10000,
-          }
-        );
-
-        console.log('FeedoGo 注册响应:', registerResponse.data);
-
-        if (registerResponse.data?.code === 1) {
-          console.log(`✅ 用户注册成功: ${customer.email}`);
-          
-          // 记录用户映射
-          await prisma.userMapping.upsert({
-            where: {
-              shopifyCustomerId_shopId: {
-                shopifyCustomerId: customer.id.toString(),
-                shopId: shop.id,
-              },
-            },
-            create: {
-              shopId: shop.id,
-              shopifyCustomerId: customer.id.toString(),
-              feedogoEmail: customer.email,
-              feedogoUserId: registerResponse.data.data?.user_id?.toString() || null,
-              syncStatus: 'synced',
-              lastSyncAt: new Date(),
-            },
-            update: {
-              feedogoEmail: customer.email,
-              feedogoUserId: registerResponse.data.data?.user_id?.toString() || null,
-              syncStatus: 'synced',
-              lastSyncAt: new Date(),
-            },
-          });
-
-          return res.status(200).json({
-            success: true,
-            message: 'User registered successfully',
-            userId: registerResponse.data.data?.user_id,
-          });
-        } else {
-          console.warn(`FeedoGo 注册失败: ${registerResponse.data?.msg || '未知错误'}`);
-          
-          // 记录失败状态
-          await prisma.userMapping.upsert({
-            where: {
-              shopifyCustomerId_shopId: {
-                shopifyCustomerId: customer.id.toString(),
-                shopId: shop.id,
-              },
-            },
-            create: {
-              shopId: shop.id,
-              shopifyCustomerId: customer.id.toString(),
-              feedogoEmail: customer.email,
-              syncStatus: 'failed',
-            },
-            update: {
-              syncStatus: 'failed',
-            },
-          });
-
-          return res.status(200).json({
-            success: false,
-            message: registerResponse.data?.msg || 'Registration failed',
-          });
-        }
-      } catch (error: any) {
-        console.error('注册到 FeedoGo 失败:', error.message);
-        
-        // 记录失败状态
-        await prisma.userMapping.upsert({
-          where: {
-            shopifyCustomerId_shopId: {
-              shopifyCustomerId: customer.id.toString(),
-              shopId: shop.id,
-            },
-          },
-          create: {
-            shopId: shop.id,
-            shopifyCustomerId: customer.id.toString(),
-            feedogoEmail: customer.email,
-            syncStatus: 'failed',
-          },
-          update: {
-            syncStatus: 'failed',
-          },
-        });
-
-        return res.status(200).json({
-          success: false,
-          message: `Registration error: ${error.message}`,
-        });
-      }
-    } else {
-      // 用户已存在，更新映射记录
-      await prisma.userMapping.upsert({
-        where: {
-          shopifyCustomerId_shopId: {
-            shopifyCustomerId: customer.id.toString(),
-            shopId: shop.id,
-          },
-        },
-        create: {
-          shopId: shop.id,
+    // 2. 记录用户映射关系（FeedoGo通过emailLogin自动识别用户）
+    // 注意：FeedoGo 不需要预先注册，用户通过邮箱登录即可
+    await prisma.userMapping.upsert({
+      where: {
+        shopifyCustomerId_shopId: {
           shopifyCustomerId: customer.id.toString(),
-          feedogoEmail: customer.email,
-          syncStatus: 'synced',
-          lastSyncAt: new Date(),
+          shopId: shop.id,
         },
-        update: {
-          syncStatus: 'synced',
-          lastSyncAt: new Date(),
-        },
-      });
+      },
+      create: {
+        shopId: shop.id,
+        shopifyCustomerId: customer.id.toString(),
+        feedogoEmail: customer.email,
+        syncStatus: userExists ? 'synced' : 'pending',
+        lastSyncAt: userExists ? new Date() : null,
+      },
+      update: {
+        feedogoEmail: customer.email,
+        syncStatus: userExists ? 'synced' : 'pending',
+        lastSyncAt: userExists ? new Date() : null,
+      },
+    });
 
-      return res.status(200).json({
-        success: true,
-        message: 'User already exists in FeedoGo',
-      });
-    }
+    return res.status(200).json({
+      success: true,
+      message: userExists 
+        ? 'User already exists in FeedoGo' 
+        : 'Customer info saved, will sync when they place an order',
+      email: customer.email,
+      userExists: userExists,
+    });
   } catch (error: any) {
     console.error('处理客户创建事件失败:', error);
     return res.status(500).json({
