@@ -65,12 +65,12 @@ export default function ApiSettings({ config, onChange, onTest }: ApiSettingsPro
           )}
 
           <TextField
-            label="FeedoGo Base URL"
+            label="FeedoGo API Base URL"
             value={config.feedogoWebhookUrl}
             onChange={(val) => handleChange('feedogoWebhookUrl', val)}
             autoComplete="off"
             placeholder="https://shop.feedogocloud.com"
-            helpText="FeedoGo 的基础URL地址（必填）"
+            helpText="FeedoGo API 的基础地址（用于调用 emailLogin 等接口，必填）"
           />
 
           <div>
@@ -139,10 +139,15 @@ export default function ApiSettings({ config, onChange, onTest }: ApiSettingsPro
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" fontWeight="semibold">配置说明：</Text>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#6d7175' }}>
-                <li>API 密钥：用于向 FeedoGo 发送订单和用户数据</li>
-                <li>Webhook URL：FeedoGo 接收推送数据的端点地址</li>
-                <li>SSO 密钥：用于生成安全的单点登录签名</li>
+                <li><strong>API Base URL</strong>：FeedoGo API 的基础地址（如：https://shop.feedogocloud.com）</li>
+                <li><strong>API 密钥</strong>：可选，FeedoGo API 不需要密钥验证</li>
+                <li><strong>SSO 密钥</strong>：可选，仅在邮箱登录失败时使用 SSO 降级方案</li>
               </ul>
+              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #dfe3e8' }}>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  💡 提示：嵌入网站的页面地址（如 feedogocloud.com）在"嵌入设置"标签配置
+                </Text>
+              </div>
             </BlockStack>
           </div>
         </BlockStack>

@@ -31,13 +31,13 @@ export default function EmbedPage() {
         } else {
           // 如果商店未找到，使用默认值
           console.warn('FeedoBridge Embed: Shop not found in database, using defaults');
-          setIframeUrl('https://shop.feedogocloud.com');
+          setIframeUrl('https://feedogocloud.com/');
           setFeedogoWebhookUrl('https://shop.feedogocloud.com');
         }
       } catch (error) {
         console.error('FeedoBridge Embed: Failed to fetch settings:', error);
         // 出错时使用默认值
-        setIframeUrl('https://shop.feedogocloud.com');
+        setIframeUrl('https://feedogocloud.com/');
         setFeedogoWebhookUrl('https://shop.feedogocloud.com');
       }
     }

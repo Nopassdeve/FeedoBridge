@@ -83,7 +83,7 @@ export default function SettingsPage({ shopId }: SettingsPageProps) {
         
         console.log('Loaded settings:', data);
         
-        setUrl(data.embeddedIframeUrl || 'https://feedogocloud.com');
+        setUrl(data.embeddedIframeUrl || 'https://feedogocloud.com/');
         setEmbedHeight(data.embedHeight || 600);
         setAutoRegister(data.enableAutoRegister ?? true);
         setEnableSso(data.enableSso ?? true);
