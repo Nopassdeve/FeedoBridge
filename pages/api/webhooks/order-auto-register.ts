@@ -76,45 +76,48 @@ export default async function handler(
     console.log('✅ FeedoGo Webhook URL:', webhookUrl);
     console.log('✅ API Key configured:', apiKey ? 'Yes (hidden)' : 'No');
 
-    // 使用 emailLogin 方式进行订单推送
+    // 直接调用爱心币兑换接口
     console.log('');
-    console.log('🔐 Step 1: Email Login to get token');
+    console.log('💰 Step 1: Exchange love coins (兑换爱心币)');
     console.log('----------------------------------------');
     
     try {
-      const emailLoginResponse = await axios.post(
-        `${webhookUrl}/api/user/emailLogin`,
-        { email: orderEmail },
+      const orderTotal = parseFloat(orderData.total_price || '0');
+      console.log('Order Details:');
+      console.log('- Order ID:', orderId);
+      console.log('- Customer Email:', orderEmail);
+      console.log('- Order Total:', orderTotal, orderData.currency || 'USD');
+      
+      // 调用 FeedoGo 的爱心币兑换接口
+      const exchangeResponse = await axios.post(
+        `${webhookUrl}/api/user/exchangeLoveCoin`,
+        {
+          email: orderEmail,
+          money: orderTotal
+        },
         {
           timeout: 10000,
           headers: { 'Content-Type': 'application/json' }
         }
       );
 
-      console.log('Email Login Response Code:', emailLoginResponse.data?.code);
+      console.log('Exchange Response Code:', exchangeResponse.data?.code);
+      console.log('Exchange Response Message:', exchangeResponse.data?.msg);
+      console.log('Exchange Response Data:', exchangeResponse.data?.data);
       
-      if (emailLoginResponse.data?.code === 1 && emailLoginResponse.data?.data?.userinfo) {
-        const userInfo = emailLoginResponse.data.data.userinfo;
-        console.log('✅ Email login successful');
-        console.log('User ID:', userInfo.user_id);
-        console.log('Nickname:', userInfo.nickname);
-        console.log('Current Score:', userInfo.score);
-        console.log('Token:', userInfo.token ? userInfo.token.substring(0, 20) + '...' : 'N/A');
+      if (exchangeResponse.data?.code === 1) {
+        console.log('✅ Love coins exchanged successfully!');
+        console.log('Message:', exchangeResponse.data.msg);
         
-        // 推送订单到 FeedoGo
-        console.log('');
-        console.log('💰 Step 2: Push order to FeedoGo (convert to love coins)');
-        console.log('----------------------------------------');
-        
-        await pushOrderToFeedoGo(
-          webhookUrl,
-          userInfo.token,
-          orderId,
-          orderData,
-          orderEmail,
-          shopDomain,
-          userInfo.user_id
-        );
+        // 记录成功日志
+        await prisma.orderPushLog.create({
+          data: {
+            shopId: shop.id,
+            shopifyOrderId: orderId,
+            status: 'success',
+            responseData: exchangeResponse.data,
+          },
+        });
 
         // 记录用户映射
         await prisma.userMapping.upsert({
@@ -128,13 +131,11 @@ export default async function handler(
             shopId: shop.id,
             shopifyCustomerId: orderData.customer?.id?.toString() || orderId,
             feedogoEmail: orderEmail,
-            feedogoUserId: userInfo.user_id.toString(),
             syncStatus: 'synced',
             lastSyncAt: new Date(),
           },
           update: {
             feedogoEmail: orderEmail,
-            feedogoUserId: userInfo.user_id.toString(),
             syncStatus: 'synced',
             lastSyncAt: new Date(),
           },
@@ -143,20 +144,22 @@ export default async function handler(
         console.log('');
         console.log('========================================');
         console.log('✅ Order processed successfully!');
+        console.log('Order Total: $' + orderTotal);
+        console.log('Love Coins: ' + orderTotal);
         console.log('========================================');
 
         return res.status(200).json({
           success: true,
-          message: 'Order pushed successfully',
-          userId: userInfo.user_id,
-          currentScore: userInfo.score
+          message: 'Love coins exchanged successfully',
+          orderTotal: orderTotal,
+          loveCoins: orderTotal
         });
       } else {
-        console.error('❌ Email login failed:', emailLoginResponse.data?.msg);
-        throw new Error(`Email login failed: ${emailLoginResponse.data?.msg || 'Unknown error'}`);
+        console.error('❌ Exchange failed:', exchangeResponse.data?.msg);
+        throw new Error(`Exchange failed: ${exchangeResponse.data?.msg || 'Unknown error'}`);
       }
     } catch (error: any) {
-      console.error('❌ Email login error:', error.message);
+      console.error('❌ Exchange love coins error:', error.message);
       console.error('Error details:', error.response?.data || error.message);
       
       // 记录失败
@@ -165,13 +168,14 @@ export default async function handler(
           shopId: shop.id,
           shopifyOrderId: orderId,
           status: 'failed',
-          errorMessage: `Email login failed: ${error.message}`,
+          errorMessage: `Exchange failed: ${error.message}`,
+          responseData: error.response?.data,
         },
       });
 
       return res.status(200).json({
         success: false,
-        message: 'Order push failed',
+        message: 'Exchange love coins failed',
         error: error.message,
       });
     }
@@ -181,84 +185,5 @@ export default async function handler(
       success: false,
       error: error.message,
     });
-  }
-}
-
-async function pushOrderToFeedoGo(
-  webhookUrl: string,
-  token: string,
-  orderId: string,
-  orderData: any,
-  orderEmail: string,
-  shopDomain: string,
-  userId: number
-) {
-  try {
-    // 计算应该获得的爱心币（根据订单金额）
-    const orderTotal = parseFloat(orderData.total_price || '0');
-    const expectedCoins = Math.floor(orderTotal); // 1元 = 1爱心币，可以根据规则调整
-    
-    console.log('Order Details:');
-    console.log('- Order ID:', orderId);
-    console.log('- Order Total:', orderTotal, orderData.currency || 'USD');
-    console.log('- Expected Love Coins:', expectedCoins);
-    console.log('- Customer Email:', orderEmail);
-    console.log('- Customer Name:', orderData.customer?.first_name, orderData.customer?.last_name);
-    
-    // 调用 FeedoGo API 添加爱心币
-    // 注意：这里需要确认 FeedoGo 是否有专门的"添加积分"接口
-    // 如果没有，可能需要 FeedoGo 团队提供
-    const response = await axios.post(
-      `${webhookUrl}/api/user/addScore`, // 假设的接口，需要确认
-      {
-        user_id: userId,
-        score: expectedCoins,
-        reason: `Shopify Order ${orderId}`,
-        order_id: orderId,
-        order_total: orderTotal,
-        currency: orderData.currency || 'USD',
-        shop: shopDomain,
-        timestamp: new Date().toISOString()
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token // 使用 emailLogin 返回的 token
-        },
-        timeout: 10000,
-      }
-    );
-
-    console.log('✅ Order pushed to FeedoGo successfully');
-    console.log('Response:', response.data);
-    
-    // 记录成功日志
-    await prisma.orderPushLog.create({
-      data: {
-        shopId: (await prisma.shop.findUnique({ where: { shopifyShopId: shopDomain }}))!.id,
-        shopifyOrderId: orderId,
-        status: 'success',
-        responseData: response.data,
-      },
-    });
-    
-    return response.data;
-  } catch (error: any) {
-    console.error('❌ Failed to push order to FeedoGo');
-    console.error('Error:', error.message);
-    console.error('Response:', error.response?.data);
-    
-    // 记录失败日志
-    await prisma.orderPushLog.create({
-      data: {
-        shopId: (await prisma.shop.findUnique({ where: { shopifyShopId: shopDomain }}))!.id,
-        shopifyOrderId: orderId,
-        status: 'failed',
-        errorMessage: `Failed to push order: ${error.message}`,
-        responseData: error.response?.data,
-      },
-    });
-    
-    throw error;
   }
 }
