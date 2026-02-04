@@ -3,8 +3,10 @@
   {% assign customer_id = customer.id %}
   {% assign customer_email = customer.email %}
   {% assign customer_params = '&customerId=' | append: customer_id | append: '&customerEmail=' | append: customer_email %}
+  {% assign customer_logged_in = true %}
 {% else %}
   {% assign customer_params = '' %}
+  {% assign customer_logged_in = false %}
 {% endif %}
 
 {% comment %} 构建Next.js应用的embed页面URL {% endcomment %}
@@ -70,7 +72,14 @@
     const finalUrl = buildUrl(targetUrl);
     
     console.log('FeedoBridge: 设备类型 -', isMobile ? '移动端' : 'PC端');
+    console.log('FeedoBridge: 客户登录状态 -', {{ customer_logged_in }});
     console.log('FeedoBridge: 加载URL -', finalUrl);
+    {% if customer %}
+    console.log('FeedoBridge: 客户邮箱 -', '{{ customer.email }}');
+    {% else %}
+    console.warn('FeedoBridge: ⚠️ 未检测到客户登录，无法自动登录FeedoGo');
+    console.warn('FeedoBridge: 请在Shopify商店前台使用客户账户登录');
+    {% endif %}
     
     iframe.src = finalUrl;
   }
@@ -173,25 +182,15 @@
   "target": "section",
   "settings": [
     {
-      "type": "text",
-      "id": "embed_url_pc",
-      "label": "PC端网站地址",
-      "info": "PC端显示的网站URL，例如：https://feedogocloud.com",
-      "default": "https://feedogocloud.com"
-    },
-    {
-      "type": "text",
-      "id": "embed_url_mobile",
-      "label": "移动端网站地址",
-      "info": "移动端显示的网站URL，如果留空则使用PC端地址",
-      "default": "https://feedogocloud.com"
-    },
-    {
       "type": "checkbox",
       "id": "enable_sso",
       "label": "启用单点登录 (SSO)",
       "info": "启用后会自动传递客户信息到嵌入的网站",
-      "default": false
+      "default": true
+    },
+    {
+      "type": "paragraph",
+      "content": "此扩展会自动加载 FeedoBridge 应用，并处理用户登录。无需手动配置URL。"
     }
   ]
 }
