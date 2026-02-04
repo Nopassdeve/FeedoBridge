@@ -43,13 +43,21 @@ export default function EmbeddedIframe({
 
   useEffect(() => {
     async function initLogin() {
+      console.log('EmbeddedIframe: initLogin started', {
+        customerEmail,
+        feedogoWebhookUrl,
+        url
+      });
+
       if (!customerEmail) {
+        console.log('EmbeddedIframe: No customerEmail, using direct URL');
         setSsoUrl(url);
         return;
       }
 
       // 优先尝试邮箱登录（如果配置了 FeedoGo Webhook URL）
       if (feedogoWebhookUrl) {
+        console.log('EmbeddedIframe: Attempting email login with:', feedogoWebhookUrl);
         try {
           const response = await fetch('/api/email-login', {
             method: 'POST',
@@ -61,9 +69,11 @@ export default function EmbeddedIframe({
           });
 
           const result = await response.json();
+          console.log('EmbeddedIframe: Email login response:', result);
           
           if (result.success && result.data?.token) {
             // 邮箱登录成功
+            console.log('EmbeddedIframe: Email login SUCCESS, token:', result.data.token.substring(0, 20) + '...');
             setTokenData(result.data);
             
             // 构建 token 登录 URL
@@ -73,12 +83,17 @@ export default function EmbeddedIframe({
             tokenUrl.searchParams.append('shop', shopId);
             tokenUrl.searchParams.append('method', 'email-login');
             
+            console.log('EmbeddedIframe: Setting URL with token:', tokenUrl.toString());
             setSsoUrl(tokenUrl.toString());
             return;
+          } else {
+            console.warn('EmbeddedIframe: Email login failed, no token in response');
           }
         } catch (error) {
-          console.warn('Email login failed, falling back to SSO:', error);
+          console.warn('EmbeddedIframe: Email login error, falling back to SSO:', error);
         }
+      } else {
+        console.log('EmbeddedIframe: No feedogoWebhookUrl, skipping email login');
       }
 
       // 降级到 SSO 登录方式

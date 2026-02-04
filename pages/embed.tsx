@@ -46,8 +46,17 @@ export default function EmbedPage() {
   }, [shop]);
 
   if (!iframeUrl || !shop) {
+    console.log('FeedoBridge Embed: Loading...', { iframeUrl, shop, feedogoWebhookUrl });
     return <Frame>Loading...</Frame>;
   }
+
+  console.log('FeedoBridge Embed: Rendering iframe with:', {
+    url: iframeUrl,
+    customerId,
+    customerEmail,
+    shopId: shop,
+    feedogoWebhookUrl
+  });
 
   return (
     <EmbeddedIframe
