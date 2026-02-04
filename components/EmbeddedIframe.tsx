@@ -76,12 +76,27 @@ export default function EmbeddedIframe({
             console.log('EmbeddedIframe: Email login SUCCESS, token:', result.data.token.substring(0, 20) + '...');
             setTokenData(result.data);
             
-            // 构建 token 登录 URL
+            // 方法1: 尝试通过 hash 传递 token（很多前端框架会读取 hash）
             const tokenUrl = new URL(url);
+            
+            // 查询参数方式
             tokenUrl.searchParams.append('token', result.data.token);
             tokenUrl.searchParams.append('user_id', result.data.userId.toString());
+            tokenUrl.searchParams.append('username', result.data.username || '');
+            tokenUrl.searchParams.append('nickname', result.data.nickname || '');
             tokenUrl.searchParams.append('shop', shopId);
             tokenUrl.searchParams.append('method', 'email-login');
+            tokenUrl.searchParams.append('auto_login', '1');
+            
+            // Hash 方式（备选方案，很多 SPA 会读取 hash）
+            const hashData = {
+              token: result.data.token,
+              userId: result.data.userId,
+              username: result.data.username,
+              nickname: result.data.nickname,
+              autoLogin: true
+            };
+            tokenUrl.hash = `auth=${encodeURIComponent(JSON.stringify(hashData))}`;
             
             console.log('EmbeddedIframe: Setting URL with token:', tokenUrl.toString());
             setSsoUrl(tokenUrl.toString());
@@ -177,23 +192,41 @@ export default function EmbeddedIframe({
 
     // 如果有 token（邮箱登录成功），发送 token 数据
     if (iframeRef.current && tokenData) {
-      iframeRef.current.contentWindow?.postMessage(
-        {
-          type: 'TOKEN_DATA',
-          id: tokenData.id,
-          userId: tokenData.userId,
-          username: tokenData.username,
-          nickname: tokenData.nickname,
-          mobile: tokenData.mobile,
-          avatar: tokenData.avatar,
-          score: tokenData.score,
-          token: tokenData.token,
-          createtime: tokenData.createtime,
-          expiretime: tokenData.expiretime,
-          expiresIn: tokenData.expiresIn
-        },
-        new URL(url).origin
-      );
+      const tokenMessage = {
+        type: 'TOKEN_DATA',
+        id: tokenData.id,
+        userId: tokenData.userId,
+        username: tokenData.username,
+        nickname: tokenData.nickname,
+        mobile: tokenData.mobile,
+        avatar: tokenData.avatar,
+        score: tokenData.score,
+        token: tokenData.token,
+        createtime: tokenData.createtime,
+        expiretime: tokenData.expiretime,
+        expiresIn: tokenData.expiresIn
+      };
+      
+      console.log('EmbeddedIframe: Sending TOKEN_DATA to iframe:', {
+        type: 'TOKEN_DATA',
+        userId: tokenData.userId,
+        token: tokenData.token.substring(0, 20) + '...',
+        origin: new URL(url).origin
+      });
+      
+      iframeRef.current.contentWindow?.postMessage(tokenMessage, new URL(url).origin);
+      
+      // 延迟 500ms 后再发送一次，确保 iframe 内容已完全加载
+      setTimeout(() => {
+        console.log('EmbeddedIframe: Re-sending TOKEN_DATA (delayed)');
+        iframeRef.current?.contentWindow?.postMessage(tokenMessage, new URL(url).origin);
+      }, 500);
+      
+      // 再延迟 2 秒发送一次
+      setTimeout(() => {
+        console.log('EmbeddedIframe: Re-sending TOKEN_DATA (final attempt)');
+        iframeRef.current?.contentWindow?.postMessage(tokenMessage, new URL(url).origin);
+      }, 2000);
     }
     // 否则发送客户信息用于 SSO
     else if (iframeRef.current && customerId) {
