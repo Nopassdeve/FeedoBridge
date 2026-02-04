@@ -1,155 +1,266 @@
-# FeedoGo 前端集成指南
+# Shopify × FeedoGo 自动登录集成文档
 
-## 概述
-FeedoBridge 已经成功调用 FeedoGo 的 `emailLogin` API 并获取了 token。现在需要 FeedoGo 前端处理这个 token 以实现自动登录。
-
-## Token 传递方式
-
-FeedoBridge 使用 **三种方式** 同时传递 token，FeedoGo 前端只需选择其中一种实现：
-
-### 方式 1：URL 查询参数（推荐）
-
-**URL 格式**：
-```
-https://feedogocloud.com/?token=xxx&user_id=28&username=xxx&nickname=xxx&shop=feedogostore.myshopify.com&method=email-login&auto_login=1
-```
-
-**参数说明**：
-- `token`: 用户登录 token（String）
-- `user_id`: 用户 ID（Number）
-- `username`: 用户名（String，可能为空）
-- `nickname`: 昵称（String）
-- `shop`: Shopify 商店域名
-- `method`: 固定值 "email-login"
-- `auto_login`: 固定值 "1"，表示需要自动登录
-
-**FeedoGo 前端实现示例**：
-```javascript
-// 在 Vue/React 应用入口处添加
-function checkAutoLogin() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-  const autoLogin = urlParams.get('auto_login');
-  
-  if (token && autoLogin === '1') {
-    // 存储 token 到 localStorage
-    localStorage.setItem('userToken', token);
-    localStorage.setItem('userId', urlParams.get('user_id'));
-    localStorage.setItem('username', urlParams.get('username') || '');
-    localStorage.setItem('nickname', urlParams.get('nickname') || '');
-    
-    // 设置到 Axios 默认 header
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    
-    // 清理 URL 参数（可选，防止刷新时重复处理）
-    window.history.replaceState({}, document.title, window.location.pathname);
-    
-    console.log('✅ 自动登录成功');
-  }
-}
-
-// 在应用启动时调用
-checkAutoLogin();
-```
+> **收件人**: FeedoGo 前端开发团队  
+> **发件人**: FeedoBridge 开发团队  
+> **日期**: 2026-02-04  
+> **主题**: Shopify 自动登录功能集成需求
 
 ---
 
-### 方式 2：URL Hash（备选）
+## 📋 概述
 
-**URL 格式**：
-```
-https://feedogocloud.com/#auth=%7B%22token%22%3A%22xxx%22%2C%22userId%22%3A28%7D
-```
+FeedoBridge（Shopify 应用）已完成与 FeedoGo 的 API 对接，成功调用了贵方的 `emailLogin` 接口并获取了用户 token。现需要 **FeedoGo 前端添加代码读取 token 并自动登录用户**。
 
-解码后的 hash 内容：
-```json
-{
-  "token": "61e11789-1a94-4570-9197-8dcf94e3f8d5",
-  "userId": 28,
-  "username": "user123",
-  "nickname": "用户昵称",
-  "autoLogin": true
-}
-```
+---
 
-**FeedoGo 前端实现示例**：
+## ✅ 已完成的工作（Shopify 侧）
+
+1. ✅ 获取 Shopify 登录用户的邮箱
+2. ✅ 调用 FeedoGo API: `POST https://shop.feedogocloud.com/api/user/emailLogin`
+3. ✅ 成功获取 token 和用户信息
+4. ✅ 将 token 传递到 iframe（3种方式同时传递）
+
+### API 调用示例
 ```javascript
-function checkHashAutoLogin() {
-  const hash = window.location.hash;
-  if (hash.startsWith('#auth=')) {
-    try {
-      const authData = JSON.parse(decodeURIComponent(hash.substring(6)));
-      
-      if (authData.autoLogin && authData.token) {
-        localStorage.setItem('userToken', authData.token);
-        localStorage.setItem('userId', authData.userId);
-        
-        axios.defaults.headers.common['Authorization'] = `Bearer ${authData.token}`;
-        
-        // 清理 hash
-        window.location.hash = '';
-        
-        console.log('✅ Hash 自动登录成功');
-      }
-    } catch (e) {
-      console.error('Hash 解析失败:', e);
+// Shopify 端调用
+POST https://shop.feedogocloud.com/api/user/emailLogin
+Content-Type: application/json
+
+{
+  "email": "nopassdeve@gmail.com"
+}
+
+// 成功响应（贵方 API 返回）
+{
+  "code": 1,
+  "msg": "Login successful",
+  "time": "1769505130",
+  "data": {
+    "userinfo": {
+      "id": 16,
+      "username": "",
+      "nickname": "Tail Guardian16",
+      "mobile": "",
+      "avatar": "/assets/img/54.png",
+      "score": 5020,
+      "token": "a06c7d2e-f17c-4185-a7e8-4ff2e5af01e1",  // ← 这个 token 需要前端处理
+      "user_id": 16,
+      "createtime": 1769505130,
+      "expiretime": 1772097130,
+      "expires_in": 2592000
     }
   }
 }
-
-checkHashAutoLogin();
 ```
 
 ---
 
-### 方式 3：PostMessage（高级）
+## 🔧 需要 FeedoGo 前端实现的功能
 
-FeedoBridge 在 iframe 加载后会通过 `window.postMessage` 发送 token 数据。
+当用户从 Shopify 商店访问 FeedoGo 时，URL 会携带 token 参数：
 
-**消息格式**：
+```
+https://feedogocloud.com/?token=a06c7d2e-f17c-4185-a7e8-4ff2e5af01e1&user_id=16&username=&nickname=Tail%20Guardian16&shop=feedogostore.myshopify.com&method=email-login&auto_login=1
+```
+
+**前端需要**：
+1. 检测 URL 中是否有 `token` 和 `auto_login=1` 参数
+2. 如果有，将 token 存储到 localStorage（或贵方使用的状态管理方案）
+3. 设置用户登录状态
+4. 清理 URL 参数（避免刷新重复处理）
+
+---
+
+## 💻 实现代码（复制粘贴即可）
+
+### 方案 1：在应用入口添加（推荐，最简单）
+
+在 FeedoGo 前端的入口文件（如 `App.vue`、`main.js` 或 `index.js`）中添加以下代码：
+
 ```javascript
-{
-  type: 'TOKEN_DATA',
-  id: 123,                    // 用户记录 ID
-  userId: 28,                 // 用户 ID
-  username: 'user123',
-  nickname: '用户昵称',
-  mobile: '13800138000',
-  avatar: 'https://...',
-  score: 100,
-  token: '61e11789-1a94-4570-9197-8dcf94e3f8d5',
-  createtime: 1234567890,
-  expiretime: 1234567890,
-  expiresIn: 2592000
+/**
+ * Shopify 自动登录处理
+ * 检测 URL 参数中的 token，如果存在则自动登录
+ */
+(function initShopifyAutoLogin() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  const userId = urlParams.get('user_id');
+  const autoLogin = urlParams.get('auto_login');
+  
+  if (token && userId && autoLogin === '1') {
+    console.log('🔗 检测到 Shopify 自动登录', { userId, token: token.substring(0, 20) + '...' });
+    
+    // 1. 存储 token 和用户信息（根据贵方实际使用的 key 调整）
+    localStorage.setItem('token', token);                              // 必须
+    localStorage.setItem('user_id', userId);                           // 必须
+    localStorage.setItem('username', urlParams.get('username') || ''); // 可选
+    localStorage.setItem('nickname', urlParams.get('nickname') || ''); // 可选
+    
+    // 2. 如果使用 Vuex/Pinia，需要提交到 store（根据实际情况调整）
+    // if (window.$store) {
+    //   window.$store.commit('SET_TOKEN', token);
+    //   window.$store.commit('SET_USER_INFO', {
+    //     id: userId,
+    //     username: urlParams.get('username'),
+    //     nickname: urlParams.get('nickname')
+    //   });
+    // }
+    
+    // 3. 设置 axios 请求头（如果 API 需要 token 认证）
+    if (window.axios) {
+      window.axios.defaults.headers.common['token'] = token;
+      // 或者根据贵方的认证方式：
+      // window.axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // 4. 清理 URL 参数（避免刷新时重复处理，保留 hash）
+    const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
+    
+    console.log('✅ Shopify 自动登录成功');
+    
+    // 5. 可选：重新加载用户数据或刷新页面
+    // location.reload();
+  }
+})();
+```
+
+### 方案 2：Vue 3 Composition API 示例
+
+如果使用 Vue 3，可以在 `App.vue` 中：
+
+```vue
+<script setup>
+import { onMounted } from 'vue';
+import { useUserStore } from '@/stores/user'; // 假设使用 Pinia
+
+onMounted(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  const userId = urlParams.get('user_id');
+  
+  if (token && userId && urlParams.get('auto_login') === '1') {
+    const userStore = useUserStore();
+    
+    // 存储到 store
+    userStore.setToken(token);
+    userStore.setUserInfo({
+      id: userId,
+      username: urlParams.get('username') || '',
+      nickname: urlParams.get('nickname') || ''
+    });
+    
+    // 清理 URL
+    window.history.replaceState({}, '', window.location.pathname);
+    
+    console.log('✅ Shopify 自动登录成功');
+  }
+});
+</script>
+```
+
+### 方案 3：React 示例
+
+```jsx
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { setToken, setUserInfo } from './store/userSlice';
+
+function App() {
+  const dispatch = useDispatch();
+  
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const userId = urlParams.get('user_id');
+    
+    if (token && userId && urlParams.get('auto_login') === '1') {
+      // 存储到 Redux
+      dispatch(setToken(token));
+      dispatch(setUserInfo({
+        id: userId,
+        username: urlParams.get('username') || '',
+        nickname: urlParams.get('nickname') || ''
+      }));
+      
+      // 清理 URL
+      window.history.replaceState({}, '', window.location.pathname);
+      
+      console.log('✅ Shopify 自动登录成功');
+    }
+  }, [dispatch]);
+  
+  return <div>...</div>;
 }
 ```
 
-**FeedoGo 前端实现示例**：
+---
+
+## 📊 URL 参数说明
+
+| 参数 | 类型 | 示例值 | 说明 |
+|------|------|--------|------|
+| `token` | String | `a06c7d2e-f17c-4185-a7e8-4ff2e5af01e1` | 用户登录 token（来自 emailLogin API） |
+| `user_id` | String | `16` | 用户 ID（对应 API 返回的 `user_id`） |
+| `username` | String | `""` | 用户名（可能为空） |
+| `nickname` | String | `Tail Guardian16` | 昵称 |
+| `shop` | String | `feedogostore.myshopify.com` | Shopify 商店域名 |
+| `method` | String | `email-login` | 固定值，标识登录方式 |
+| `auto_login` | String | `1` | 固定值，标识需要自动登录 |
+
+---
+
+## 🧪 测试验证
+
+### 1. 打开浏览器开发者工具
+
+访问 Shopify 商店的 FeedoGo 嵌入页面后，按 F12 打开控制台。
+
+### 2. 检查 URL 是否包含 token
+
 ```javascript
-// 监听来自父窗口的消息
+console.log('当前 URL:', window.location.href);
+// 应该看到：https://feedogocloud.com/?token=xxx&user_id=16&auto_login=1
+```
+
+### 3. 检查 localStorage 是否存储成功
+
+```javascript
+console.log('Token:', localStorage.getItem('token'));
+console.log('User ID:', localStorage.getItem('user_id'));
+// 应该输出对应的值
+```
+
+### 4. 检查登录状态
+
+```javascript
+// 根据贵方的用户状态检查方式
+console.log('当前用户:', window.$store?.state?.user); // Vuex
+// 或
+console.log('登录状态:', !!localStorage.getItem('token'));
+```
+
+---
+
+## 🔄 备用方案：PostMessage
+
+如果 URL 参数方式不可行，我们还同时通过 `postMessage` 发送了 token 数据。
+
+**接收代码**：
+```javascript
 window.addEventListener('message', function(event) {
-  // 安全检查：验证来源
+  // 安全验证：确认来源
   if (event.origin !== 'https://shopifyapp.xmasforest.com') {
     return;
   }
   
   if (event.data.type === 'TOKEN_DATA' && event.data.token) {
-    console.log('收到来自 Shopify 的 token:', event.data);
+    console.log('📨 收到 Shopify postMessage token');
     
     // 存储 token
-    localStorage.setItem('userToken', event.data.token);
-    localStorage.setItem('userId', event.data.userId);
-    localStorage.setItem('username', event.data.username || '');
-    localStorage.setItem('nickname', event.data.nickname || '');
-    
-    // 设置 Axios header
-    axios.defaults.headers.common['Authorization'] = `Bearer ${event.data.token}`;
-    
-    // 发送确认消息（可选）
-    event.source.postMessage({
-      type: 'EMAIL_LOGIN_SUCCESS',
-      userId: event.data.userId
-    }, event.origin);
+    localStorage.setItem('token', event.data.token);
+    localStorage.setItem('user_id', event.data.userId);
     
     console.log('✅ PostMessage 自动登录成功');
   }
@@ -158,110 +269,29 @@ window.addEventListener('message', function(event) {
 
 ---
 
-## 推荐实现方案
+## ⚠️ 注意事项
 
-**最简单的实现**：在应用入口（如 `App.vue` 或 `index.js`）添加以下代码：
-
-```javascript
-// 完整的自动登录检测代码
-(function initShopifyAutoLogin() {
-  // 方法1: 检查 URL 参数
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-  
-  if (token && urlParams.get('auto_login') === '1') {
-    console.log('🔗 检测到 Shopify 自动登录 (URL 参数)');
-    
-    localStorage.setItem('userToken', token);
-    localStorage.setItem('userId', urlParams.get('user_id') || '');
-    localStorage.setItem('username', urlParams.get('username') || '');
-    localStorage.setItem('nickname', urlParams.get('nickname') || '');
-    
-    if (window.axios) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    }
-    
-    // 清理 URL（可选）
-    const cleanUrl = window.location.origin + window.location.pathname;
-    window.history.replaceState({}, document.title, cleanUrl);
-    
-    console.log('✅ Shopify 自动登录成功');
-    return;
-  }
-  
-  // 方法2: 监听 postMessage（作为备用）
-  window.addEventListener('message', function(event) {
-    if (event.data.type === 'TOKEN_DATA' && event.data.token) {
-      console.log('📨 收到 Shopify postMessage token');
-      
-      localStorage.setItem('userToken', event.data.token);
-      localStorage.setItem('userId', event.data.userId);
-      
-      if (window.axios) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${event.data.token}`;
-      }
-      
-      console.log('✅ PostMessage 自动登录成功');
-    }
-  });
-})();
-```
+1. **Token 存储 Key**: 请根据贵方现有代码使用的 localStorage key 调整（如 `token`、`userToken`、`access_token` 等）
+2. **状态管理**: 如果使用 Vuex/Pinia/Redux，需要在上述代码中添加对应的 commit/dispatch
+3. **API 认证**: 确认贵方 API 请求的 token 传递方式（header 中的 key 是 `token`、`Authorization` 还是其他）
+4. **Token 过期**: API 返回的 `expiretime` 可用于判断 token 是否过期
 
 ---
 
-## 测试验证
+## 📞 技术支持
 
-### 1. 检查 URL 参数
-在浏览器控制台运行：
-```javascript
-console.log(window.location.href);
-// 应该看到: ?token=xxx&user_id=28&auto_login=1
-```
+如有任何疑问或需要协助，请联系：
 
-### 2. 检查 localStorage
-```javascript
-console.log(localStorage.getItem('userToken'));
-// 应该输出 token 值
-```
-
-### 3. 检查登录状态
-```javascript
-// 根据 FeedoGo 现有的用户状态检查方式
-console.log('当前用户:', store.state.user); // Vuex
-// 或
-console.log('当前用户:', this.$store.getters.currentUser);
-```
+- **GitHub**: https://github.com/Nopassdeve/FeedoBridge
+- **邮箱**: nopassdeve@gmail.com
 
 ---
 
-## 常见问题
+## ✨ 总结
 
-### Q1: 为什么 iframe 中看不到 URL 参数？
-A: 请检查浏览器控制台是否有跨域错误。如果 FeedoGo 网站和 Shopify 应用不同域，需要确保 CORS 配置正确。
+**Shopify 侧**：✅ 已完成  
+**FeedoGo 侧**：⏳ 需添加上述任一代码即可完成集成
 
-### Q2: 如何调试 postMessage？
-A: 在控制台添加全局监听：
-```javascript
-window.addEventListener('message', e => console.log('Message received:', e.data));
-```
+**预计工作量**：约 10-20 分钟（复制粘贴代码 + 根据实际项目调整）
 
-### Q3: Token 过期怎么办？
-A: emailLogin API 返回的 token 包含 `expiretime` 和 `expiresIn` 字段，FeedoGo 前端应该检查 token 是否过期，并在过期时清理 localStorage。
-
----
-
-## 联系支持
-
-如有集成问题，请联系 FeedoBridge 开发团队：
-- GitHub Issues: https://github.com/Nopassdeve/FeedoBridge/issues
-- 当前实现状态：✅ emailLogin API 调用成功，token 已传递到 iframe
-
-**已验证的功能**：
-- ✅ Shopify 客户信息获取
-- ✅ emailLogin API 调用成功
-- ✅ Token 生成成功（示例：`61e11789-1a94-4570-9197-8dcf94e3f8d5`）
-- ✅ URL 参数传递成功
-- ✅ PostMessage 发送成功
-- ⚠️ FeedoGo 前端 token 处理：待实现
-
-**下一步**：FeedoGo 前端团队需要选择上述任一方式处理 token 以完成自动登录功能。
+**集成完成后效果**：Shopify 用户访问嵌入的 FeedoGo 页面时，将自动登录，无需手动输入账号密码。
