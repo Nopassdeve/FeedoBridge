@@ -11,7 +11,7 @@ interface Settings {
 export default function EmbedPage() {
   const router = useRouter();
   const { shop, customerId, customerEmail } = router.query;
-  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [feedogoFrontendUrl, setFeedogoFrontendUrl] = useState<string | null>(null);
   const [feedogoWebhookUrl, setFeedogoWebhookUrl] = useState<string>('');
 
   useEffect(() => {
@@ -26,32 +26,39 @@ export default function EmbedPage() {
         if (response.ok) {
           const data: Settings = await response.json();
           console.log('FeedoBridge Embed: Settings loaded:', data);
-          setIframeUrl(data.embeddedIframeUrl);
-          setFeedogoWebhookUrl(data.feedogoWebhookUrl || '');
+          
+          const apiBaseUrl = data.feedogoWebhookUrl || 'https://shop.feedogocloud.com';
+          setFeedogoWebhookUrl(apiBaseUrl);
+          
+          // 从 API base URL 推断前端 URL
+          // 例如: https://shop.feedogocloud.com -> https://feedogocloud.com
+          const frontendUrl = apiBaseUrl.replace('/api', '').replace('shop.', '');
+          console.log('FeedoBridge Embed: Derived frontend URL:', frontendUrl);
+          setFeedogoFrontendUrl(frontendUrl);
         } else {
           // 如果商店未找到，使用默认值
           console.warn('FeedoBridge Embed: Shop not found in database, using defaults');
-          setIframeUrl('https://feedogocloud.com/');
           setFeedogoWebhookUrl('https://shop.feedogocloud.com');
+          setFeedogoFrontendUrl('https://feedogocloud.com');
         }
       } catch (error) {
         console.error('FeedoBridge Embed: Failed to fetch settings:', error);
         // 出错时使用默认值
-        setIframeUrl('https://feedogocloud.com/');
         setFeedogoWebhookUrl('https://shop.feedogocloud.com');
+        setFeedogoFrontendUrl('https://feedogocloud.com');
       }
     }
 
     fetchSettings();
   }, [shop]);
 
-  if (!iframeUrl || !shop) {
-    console.log('FeedoBridge Embed: Loading...', { iframeUrl, shop, feedogoWebhookUrl });
+  if (!feedogoFrontendUrl || !shop) {
+    console.log('FeedoBridge Embed: Loading...', { feedogoFrontendUrl, shop, feedogoWebhookUrl });
     return <Frame>Loading...</Frame>;
   }
 
   console.log('FeedoBridge Embed: Rendering iframe with:', {
-    url: iframeUrl,
+    feedogoFrontendUrl,
     customerId,
     customerEmail,
     shopId: shop,
@@ -60,7 +67,7 @@ export default function EmbedPage() {
 
   return (
     <EmbeddedIframe
-      url={iframeUrl}
+      url={feedogoFrontendUrl}
       customerId={customerId as string}
       customerEmail={customerEmail as string}
       shopId={shop as string}
