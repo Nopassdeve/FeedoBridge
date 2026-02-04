@@ -12,10 +12,11 @@ export default async function handler(
   }
 
   try {
+    // 使用 shopifyShopId 查询（与 /api/settings 保持一致）
     const shopData = await prisma.shop.findUnique({
-      where: { shopDomain: shop },
+      where: { shopifyShopId: shop },
       include: {
-        appSettings: true
+        settings: true
       }
     });
 
@@ -23,7 +24,8 @@ export default async function handler(
       return res.status(200).json({
         found: false,
         shop,
-        message: 'Shop not found in database',
+        message: 'Shop not found in database. Make sure the app is installed.',
+        hint: 'Go to Shopify Admin → Apps → FeedoBridge to install/reinstall',
         defaultSettings: {
           embeddedIframeUrl: 'https://feedogocloud.com/',
           feedogoWebhookUrl: 'https://shop.feedogocloud.com'
@@ -31,13 +33,16 @@ export default async function handler(
       });
     }
 
-    const settings = shopData.appSettings || {};
+    const settings = shopData.settings;
 
     return res.status(200).json({
       found: true,
       shop,
       shopId: shopData.id,
-      settings: {
+      shopifyShopId: shopData.shopifyShopId,
+      shopName: shopData.shopName,
+      hasSettings: !!settings,
+      settings: settings ? {
         embeddedIframeUrl: settings.embeddedIframeUrl,
         feedogoWebhookUrl: settings.feedogoWebhookUrl,
         feedogoApiKey: settings.feedogoApiKey ? '***configured***' : null,
@@ -45,8 +50,7 @@ export default async function handler(
         enableAutoRegister: settings.enableAutoRegister,
         enableSso: settings.enableSso,
         embedHeight: settings.embedHeight
-      },
-      rawSettings: settings
+      } : null
     });
   } catch (error) {
     console.error('Debug settings error:', error);
