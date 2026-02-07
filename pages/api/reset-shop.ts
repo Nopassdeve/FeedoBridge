@@ -31,9 +31,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 删除店铺的所有相关数据
     await prisma.$transaction([
-      // 删除订单日志（shop 字段是 String）
+      // 删除订单日志（shopId 是外键）
       prisma.orderPushLog.deleteMany({
-        where: { shop: shop }
+        where: { shopId: shopRecord.id }
       }),
       // 删除用户映射（shopId 是外键）
       prisma.userMapping.deleteMany({
@@ -41,6 +41,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }),
       // 删除设置（shopId 是外键）
       prisma.appSetting.deleteMany({
+        where: { shopId: shopRecord.id }
+      }),
+      // 删除 Thank You Modal 事件
+      prisma.thankYouModalEvent.deleteMany({
         where: { shopId: shopRecord.id }
       }),
       // 最后删除店铺
