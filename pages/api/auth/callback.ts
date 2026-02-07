@@ -64,11 +64,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`[OAuth] Token saved to database successfully`);
 
-    const redirectUrl = `https://${shop}/admin/apps/${apiKey}`;
+    // 使用正确的应用路径格式
+    const appHandle = 'feedobridge';
+    const redirectUrl = `https://${shop}/admin/apps/${appHandle}`;
     console.log(`[OAuth] Redirecting to: ${redirectUrl}`);
-    res.redirect(redirectUrl);
+    
+    return res.redirect(redirectUrl);
   } catch (error: any) {
     console.error(`[OAuth] Error:`, error);
-    res.status(500).send(`OAuth callback failed: ${error.message}`);
+    console.error(`[OAuth] Error stack:`, error.stack);
+    return res.status(500).send(`OAuth callback failed: ${error.message}`);
   }
 }
