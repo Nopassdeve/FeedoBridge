@@ -20,23 +20,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // 先获取店铺记录
+    const shopRecord = await prisma.shop.findUnique({
+      where: { shopifyShopId: shop }
+    });
+
+    if (!shopRecord) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
+
     // 删除店铺的所有相关数据
     await prisma.$transaction([
-      // 删除订单日志
+      // 删除订单日志（shop 字段是 String）
       prisma.orderPushLog.deleteMany({
-        where: { shop }
+        where: { shop: shop }
       }),
-      // 删除用户映射
+      // 删除用户映射（shopId 是外键）
       prisma.userMapping.deleteMany({
-        where: { shop }
+        where: { shopId: shopRecord.id }
       }),
-      // 删除设置
+      // 删除设置（shopId 是外键）
       prisma.appSetting.deleteMany({
-        where: { shop: { shopifyShopId: shop } }
+        where: { shopId: shopRecord.id }
       }),
       // 最后删除店铺
-      prisma.shop.deleteMany({
-        where: { shopifyShopId: shop }
+      prisma.shop.delete({
+        where: { id: shopRecord.id }
       })
     ]);
 
