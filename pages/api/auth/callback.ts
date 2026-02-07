@@ -12,6 +12,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const scopes = process.env.SCOPES || 'read_products,write_products,read_customers,write_customers,read_orders,write_orders';
 
   try {
+    console.log(`[OAuth] Processing callback for shop: ${shop}`);
+    console.log(`[OAuth] Using API Key: ${apiKey?.substring(0, 10)}...`);
+    
     const accessTokenResponse = await fetch(
       `https://${shop}/admin/oauth/access_token`,
       {
@@ -26,7 +29,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     const accessTokenData = await accessTokenResponse.json();
+    console.log(`[OAuth] Response status: ${accessTokenResponse.status}`);
+    console.log(`[OAuth] Response data:`, accessTokenData);
+
+    if (!accessTokenResponse.ok) {
+      console.error(`[OAuth] Failed to get access token:`, accessTokenData);
+      return res.status(400).send(`OAuth failed: ${JSON.stringify(accessTokenData)}`);
+    }
+
     const { access_token } = accessTokenData;
+
+    if (!access_token) {
+      console.error(`[OAuth] No access_token in response`);
+      return res.status(400).send('No access token received');
+    }
+
+    console.log(`[OAuth] Got access token: ${access_token.substring(0, 10)}... (length: ${access_token.length})`);
 
     const { prisma } = await import('@/lib/prisma');
     
@@ -44,9 +62,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
+    console.log(`[OAuth] Token saved to database successfully`);
+
     const redirectUrl = `https://${shop}/admin/apps/${apiKey}`;
+    console.log(`[OAuth] Redirecting to: ${redirectUrl}`);
     res.redirect(redirectUrl);
-  } catch (error) {
-    res.status(500).send('OAuth callback failed');
+  } catch (error: any) {
+    console.error(`[OAuth] Error:`, error);
+    res.status(500).send(`OAuth callback failed: ${error.message}`);
   }
 }
