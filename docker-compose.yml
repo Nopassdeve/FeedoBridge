@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=i16jjRQEjHBW6ze985jn
       - POSTGRES_DB=feedobridge
     volumes:
       - postgres_data:/var/lib/postgresql/data
