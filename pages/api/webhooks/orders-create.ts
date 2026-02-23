@@ -43,43 +43,72 @@ export const config = {
  * 2. 如果用户未在 FeedoGo 注册，先检查并提示
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log('===== [Webhook] 收到订单创建请求 =====');
+  
   if (req.method !== 'POST') {
+    console.log('[Webhook] 错误：非 POST 请求');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // 读取原始 body
-  const rawBody = await getRawBody(req);
-  
-  // 验证 Shopify Webhook 签名
-  const hmac = req.headers['x-shopify-hmac-sha256'] as string;
-  
-  if (!verifyShopifyWebhook(rawBody, hmac)) {
-    console.error('Invalid webhook signature');
-    return res.status(401).json({ error: 'Invalid signature' });
-  }
+  try {
+    // 读取原始 body
+    const rawBody = await getRawBody(req);
+    console.log('[Webhook] 接收到 Body 长度:', rawBody.length);
+    
+    // 验证 Shopify Webhook 签名
+    const hmac = req.headers['x-shopify-hmac-sha256'] as string;
+    const shopDomain = req.headers['x-shopify-shop-domain'] as string;
+    
+    console.log('[Webhook] Shop Domain:', shopDomain);
+    console.log('[Webhook] HMAC Header:', hmac ? '存在' : '缺失');
+    
+    if (!hmac) {
+      console.error('[Webhook] 错误：缺少 HMAC 签名');
+      return res.status(401).json({ error: 'Missing HMAC signature' });
+    }
+    
+    const isValid = verifyShopifyWebhook(rawBody, hmac);
+    console.log('[Webhook] 签名验证结果:', isValid);
+    
+    if (!isValid) {
+      console.error('[Webhook] 错误：签名验证失败');
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
 
-  // 解析 JSON
-  const order: ShopifyOrder = JSON.parse(rawBody);
-  const shopDomain = req.headers['x-shopify-shop-domain'] as string;
+    // 解析 JSON
+    const order: ShopifyOrder = JSON.parse(rawBody);
+    console.log('[Webhook] 订单 ID:', order.id);
+    console.log('[Webhook] 订单金额:', order.total_price);
+    console.log('[Webhook] 客户邮箱:', order.email);
 
-  if (!order.email || !shopDomain) {
-    return res.status(400).json({ error: 'Missing required fields' });
+    if (!order.email || !shopDomain) {
+      console.log('[Webhook] 错误：缺少必需字段');
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+  } catch (error: any) {
+    console.error('[Webhook] 初始化失败:', error.message);
+    return res.status(500).json({ error: 'Initialization error', message: error.message });
   }
 
   try {
     // 获取店铺记录
+    console.log('[Webhook] 查询店铺记录:', shopDomain);
     const shop = await prisma.shop.findUnique({
       where: { shopifyShopId: shopDomain },
       include: { settings: true },
     });
 
     if (!shop) {
+      console.log('[Webhook] 错误：店铺未找到');
       return res.status(404).json({ error: 'Shop not found' });
     }
 
+    console.log('[Webhook] 店铺 ID:', shop.id);
     const webhookUrl = shop.settings?.feedogoWebhookUrl;
+    console.log('[Webhook] FeedoGo URL:', webhookUrl);
     
     if (!webhookUrl) {
+      console.log('[Webhook] Webhook URL 未配置，跳过处理');
       return res.status(200).json({ 
         success: true, 
         message: 'FeedoGo Webhook URL not configured' 
@@ -90,8 +119,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // 提取订单金额（转换为数字）
     const orderAmount = parseFloat(order.total_price);
+    console.log('[Webhook] 解析后的订单金额:', orderAmount);
     
     if (isNaN(orderAmount) || orderAmount <= 0) {
+      console.log('[Webhook] 无效的订单金额');
       return res.status(200).json({
         success: false,
         message: 'Invalid order amount'
@@ -99,6 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 1. 先检查用户是否在 FeedoGo 注册
+    console.log('[Webhook] 检查用户是否注册:', order.email);
     let userExists = false;
     try {
       const checkResponse = await axios.post(
@@ -112,12 +144,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (checkResponse.data?.code === 1 && checkResponse.data?.data?.userinfo?.token) {
         userExists = true;
+        console.log('[Webhook] 用户已注册');
+      } else {
+        console.log('[Webhook] 用户未注册');
       }
     } catch (error: any) {
-      // User not registered, continue
+      console.log('[Webhook] 用户注册检查失败:', error.message);
     }
 
     // 2. 调用爱心币兑换接口，同步订单金额
+    console.log('[Webhook] 调用爱心币兑换 API...');
     try {
       const exchangeResponse = await axios.post(
         `${feedogoBaseUrl}/api/user/exchangeLoveCoin`,
@@ -131,6 +167,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       );
 
+      console.log('[Webhook] 兑换 API 响应码:', exchangeResponse.data?.code);
+      console.log('[Webhook] 兑换 API 消息:', exchangeResponse.data?.msg);
+
       // 记录订单推送日志
       await prisma.orderPushLog.create({
         data: {
@@ -142,8 +181,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           retryCount: 0,
         },
       });
+      
+      console.log('[Webhook] 订单日志已记录');
 
       if (exchangeResponse.data?.code === 1) {
+        console.log('[Webhook] ✅ 订单处理成功');
         return res.status(200).json({
           success: true,
           message: '订单金额已同步到 FeedoGo',
@@ -154,6 +196,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           userExists: userExists,
         });
       } else {
+        console.log('[Webhook] ❌ 兑换失败:', exchangeResponse.data?.msg);
         return res.status(200).json({
           success: false,
           message: exchangeResponse.data?.msg || 'Exchange failed',
@@ -162,6 +205,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
     } catch (error: any) {
+      console.error('[Webhook] ❌ 兑换 API 调用失败:', error.message);
       
       // 记录失败日志
       await prisma.orderPushLog.create({
@@ -182,7 +226,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
   } catch (error: any) {
-    console.error('处理订单创建事件失败:', error);
+    console.error('[Webhook] ❌ 处理订单创建事件失败:', error);
+    console.error('[Webhook] 错误堆栈:', error.stack);
     return res.status(500).json({
       success: false,
       error: 'Internal server error',
