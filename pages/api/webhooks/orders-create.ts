@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { verifyShopifyWebhook } from '@/lib/shopify';
 import axios from 'axios';
+import { Readable } from 'stream';
 
 interface ShopifyOrder {
   id: number;
@@ -27,6 +28,13 @@ interface ShopifyOrder {
   }>;
 }
 
+// 禁用 Next.js 自动解析 body，我们需要原始的 buffer 来验证签名
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 /**
  * Shopify 订单创建 Webhook 处理器
  * 功能：
@@ -38,19 +46,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // 读取原始 body
+  const rawBody = await getRawBody(req);
+  
   // 验证 Shopify Webhook 签名
   const hmac = req.headers['x-shopify-hmac-sha256'] as string;
-  const rawBody = JSON.stringify(req.body);
   
   if (!verifyShopifyWebhook(rawBody, hmac)) {
     console.error('Invalid webhook signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  const order: ShopifyOrder = req.body;
+  // 解析 JSON
+  const order: ShopifyOrder = JSON.parse(rawBody);
   const shopDomain = req.headers['x-shopify-shop-domain'] as string;
-
-  console.log(`📦 收到订单创建事件: 订单#${order.order_number}, 金额: ${order.total_price} ${order.currency}, 客户: ${order.email}`);
 
   if (!order.email || !shopDomain) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -64,14 +73,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!shop) {
-      console.warn(`Shop not found: ${shopDomain}`);
       return res.status(404).json({ error: 'Shop not found' });
     }
 
     const webhookUrl = shop.settings?.feedogoWebhookUrl;
     
     if (!webhookUrl) {
-      console.warn(`FeedoGo Webhook URL not configured for shop: ${shopDomain}`);
       return res.status(200).json({ 
         success: true, 
         message: 'FeedoGo Webhook URL not configured' 
@@ -84,7 +91,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const orderAmount = parseFloat(order.total_price);
     
     if (isNaN(orderAmount) || orderAmount <= 0) {
-      console.warn(`Invalid order amount: ${order.total_price}`);
       return res.status(200).json({
         success: false,
         message: 'Invalid order amount'
@@ -105,16 +111,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (checkResponse.data?.code === 1 && checkResponse.data?.data?.userinfo?.token) {
         userExists = true;
-        console.log(`✅ 用户已在 FeedoGo 注册: ${order.email}`);
       }
     } catch (error: any) {
-      console.log(`⚠️ 用户未在 FeedoGo 注册: ${order.email}`);
+      // User not registered, continue
     }
 
     // 2. 调用爱心币兑换接口，同步订单金额
     try {
-      console.log(`💰 同步订单金额到 FeedoGo: ${order.email} - ${orderAmount} ${order.currency}`);
-      
       const exchangeResponse = await axios.post(
         `${feedogoBaseUrl}/api/user/exchangeLoveCoin`,
         {
@@ -126,8 +129,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           timeout: 10000,
         }
       );
-
-      console.log('FeedoGo 爱心币兑换响应:', exchangeResponse.data);
 
       // 记录订单推送日志
       await prisma.orderPushLog.create({
@@ -142,8 +143,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       if (exchangeResponse.data?.code === 1) {
-        console.log(`✅ 订单金额同步成功: 订单#${order.order_number}`);
-        
         return res.status(200).json({
           success: true,
           message: '订单金额已同步到 FeedoGo',
@@ -154,8 +153,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           userExists: userExists,
         });
       } else {
-        console.warn(`❌ 订单金额同步失败: ${exchangeResponse.data?.msg || '未知错误'}`);
-        
         return res.status(200).json({
           success: false,
           message: exchangeResponse.data?.msg || 'Exchange failed',
@@ -164,7 +161,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
     } catch (error: any) {
-      console.error('调用爱心币兑换接口失败:', error.message);
       
       // 记录失败日志
       await prisma.orderPushLog.create({
@@ -193,3 +189,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 }
+
+// 辅助函数：读取原始 body
+async function getRawBody(req: NextApiRequest): Promise<string> {
+  const chunks: Buffer[] = [];
+  const readable = req as unknown as Readable;
+  
+  for await (const chunk of readable) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  
+  return Buffer.concat(chunks).toString('utf8');
+}
+

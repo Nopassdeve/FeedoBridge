@@ -1,5 +1,6 @@
 module.exports = {
   reactStrictMode: true,
+  output: 'standalone',
   transpilePackages: ['@shopify/polaris', '@shopify/app-bridge-react'],
   async headers() {
     return [

@@ -41,12 +41,12 @@ export default async function handler(
       where: { shopId: shopRecord.id },
       create: {
         shopId: shopRecord.id,
-        feedogoBaseUrl: 'https://shop.feedogocloud.com', // 默认值
+        feedogoWebhookUrl: 'https://shop.feedogocloud.com',
+        enableAutoRegister: true,
+        enableSso: true,
       },
       update: {},
     });
-
-    console.log('[Manual Install] AppSetting created:', setting.id);
 
     return res.status(200).json({
       success: true,

@@ -88,10 +88,9 @@ async function syncSingleCustomer(
       if (checkResponse.data?.code === 1 && checkResponse.data?.data?.userinfo?.token) {
         userExists = true;
         existingUserId = checkResponse.data.data.userinfo.user_id;
-        console.log(`✅ 用户已存在: ${email}, ID: ${existingUserId}`);
       }
     } catch (error: any) {
-      console.log(`用户检查: ${email} 不存在或检查失败`);
+      // User check failed
     }
 
     // 2. 如果不存在，注册到 FeedoGo

@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: feedobridge-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@db:5432/feedobridge
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./.env:/app/.env
+    networks:
+      - feedobridge-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: feedobridge-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=feedobridge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - feedobridge-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: feedobridge-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - feedobridge-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  feedobridge-network:
+    driver: bridge

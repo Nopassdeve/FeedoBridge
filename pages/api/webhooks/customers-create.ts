@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { verifyShopifyWebhook } from '@/lib/shopify';
 import axios from 'axios';
+import { Readable } from 'stream';
 
 interface ShopifyCustomer {
   id: number;
@@ -14,6 +15,13 @@ interface ShopifyCustomer {
   tags: string;
 }
 
+// 禁用 Next.js 自动解析 body，我们需要原始的 buffer 来验证签名
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 /**
  * Shopify 客户创建 Webhook 处理器
  * 当用户在 Shopify 网站注册时，自动将邮箱发送给 FeedoGo API 进行注册
@@ -23,19 +31,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // 读取原始 body
+  const rawBody = await getRawBody(req);
+  
   // 验证 Shopify Webhook 签名
   const hmac = req.headers['x-shopify-hmac-sha256'] as string;
-  const rawBody = JSON.stringify(req.body);
   
   if (!verifyShopifyWebhook(rawBody, hmac)) {
     console.error('Invalid webhook signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  const customer: ShopifyCustomer = req.body;
+  // 解析 JSON
+  const customer: ShopifyCustomer = JSON.parse(rawBody);
   const shopDomain = req.headers['x-shopify-shop-domain'] as string;
-
-  console.log(`📥 收到客户创建事件: ${customer.email} from ${shopDomain}`);
 
   if (!customer.email || !shopDomain) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -49,13 +58,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!shop) {
-      console.warn(`Shop not found: ${shopDomain}`);
       return res.status(404).json({ error: 'Shop not found' });
     }
 
     // 检查是否启用自动注册
     if (!shop.settings?.enableAutoRegister) {
-      console.log('自动注册已禁用，跳过');
       return res.status(200).json({ 
         success: true, 
         message: 'Auto-register disabled' 
@@ -65,7 +72,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const webhookUrl = shop.settings?.feedogoWebhookUrl;
     
     if (!webhookUrl) {
-      console.warn(`FeedoGo Webhook URL not configured for shop: ${shopDomain}`);
       return res.status(200).json({ 
         success: true, 
         message: 'FeedoGo Webhook URL not configured' 
@@ -92,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log(`✅ 用户已存在于 FeedoGo: ${customer.email}`);
       }
     } catch (error: any) {
-      console.log(`用户不存在或检查失败，继续注册流程: ${error.message}`);
+      // User check failed, continue with registration
     }
 
     // 2. 记录用户映射关系（FeedoGo通过emailLogin自动识别用户）
@@ -135,3 +141,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 }
+
+// 辅助函数：读取原始 body
+async function getRawBody(req: NextApiRequest): Promise<string> {
+  const chunks: Buffer[] = [];
+  const readable = req as unknown as Readable;
+  
+  for await (const chunk of readable) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  
+  return Buffer.concat(chunks).toString('utf8');
+}
+
