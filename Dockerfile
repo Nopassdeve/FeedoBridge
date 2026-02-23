@@ -1,8 +1,11 @@
-# 使用官方 Node.js 镜像
-FROM node:18-alpine AS base
+# 使用 Debian 基础镜像（对 Prisma 支持更好）
+FROM node:18-slim AS base
 
-# 安装 OpenSSL 1.1 和其他依赖
-RUN apk add --no-cache openssl1.1-compat libc6-compat
+# 安装 OpenSSL 和其他依赖
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # 安装依赖阶段
 FROM base AS deps
