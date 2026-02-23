@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ 
       success: true,
       message: `All data for ${shop} has been deleted. You can now reinstall the app.`,
-      installUrl: `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=read_products,write_products,read_customers,write_customers,read_orders,write_orders&redirect_uri=https://shopifyapp.xmasforest.com/api/auth/callback`
+      installUrl: `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=read_products,write_products,read_customers,write_customers,read_orders,write_orders&redirect_uri=${process.env.HOST}/api/auth/callback`
     });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });

@@ -1,0 +1,51 @@
+#!/usr/bin/expect -f
+
+# FeedoBridge Expect 部署脚本
+# 用于自动化 SSH 密码输入
+
+set timeout 600
+set server "31.97.211.143"
+set password "7lrpZhE94Yeo83zr8F&s"
+
+spawn ssh root@$server
+
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    "root@*:~#" {
+        send "cd /opt/feedobridge\r"
+    }
+}
+
+expect "root@*:*feedobridge#"
+send "git pull\r"
+
+expect "root@*:*feedobridge#"
+send "docker-compose down -v\r"
+
+expect "root@*:*feedobridge#"
+send "docker system prune -af\r"
+
+expect "Are you sure you want to continue?" {
+    send "y\r"
+}
+
+expect "root@*:*feedobridge#"
+send "docker-compose build --no-cache\r"
+
+expect "root@*:*feedobridge#" {
+    send "docker-compose up -d\r"
+}
+
+expect "root@*:*feedobridge#"
+send "echo '✅ 部署完成！'\r"
+
+expect "root@*:*feedobridge#"
+send "docker ps\r"
+
+expect "root@*:*feedobridge#"
+send "exit\r"
+
+expect eof
