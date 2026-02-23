@@ -1,9 +1,11 @@
 # 使用官方 Node.js 镜像
 FROM node:18-alpine AS base
 
+# 安装 OpenSSL 1.1 和其他依赖
+RUN apk add --no-cache openssl1.1-compat libc6-compat
+
 # 安装依赖阶段
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # 复制 package.json 和 package-lock.json
