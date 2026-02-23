@@ -22,6 +22,10 @@ export default function ThankYouModalSettings({ config, onChange }: ThankYouModa
     onChange({ ...config, [field]: value });
   };
 
+  const handleCheckboxChange = useCallback((value: boolean) => {
+    handleChange('enabled', value);
+  }, [config]);
+
   return (
     <BlockStack gap="400">
       <Card>
@@ -31,7 +35,7 @@ export default function ThankYouModalSettings({ config, onChange }: ThankYouModa
           <Checkbox
             label="启用弹窗"
             checked={config.enabled}
-            onChange={(value) => handleChange('enabled', value)}
+            onChange={handleCheckboxChange}
           />
 
           <TextField
