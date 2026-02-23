@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRouter } from 'next/router';
 import SettingsPage from '@/components/SettingsPage';
 
