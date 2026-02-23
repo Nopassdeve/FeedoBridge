@@ -9,7 +9,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:password@db:5432/feedobridge
+      - DATABASE_URL=postgresql://postgres:i16jjRQEjHBW6ze985jn@db:5432/feedobridge
       - REDIS_URL=redis://redis:6379
     depends_on:
       db:

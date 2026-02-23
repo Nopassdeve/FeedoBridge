@@ -38,6 +38,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# 设置 HOME 目录以避免 npm 权限错误
+ENV HOME=/tmp
+
 # 复制必要文件
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
