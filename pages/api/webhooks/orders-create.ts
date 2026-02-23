@@ -85,12 +85,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('[Webhook] 错误：缺少必需字段');
       return res.status(400).json({ error: 'Missing required fields' });
     }
-  } catch (error: any) {
-    console.error('[Webhook] 初始化失败:', error.message);
-    return res.status(500).json({ error: 'Initialization error', message: error.message });
-  }
-
-  try {
+    
+    // === 主要业务逻辑 ===
+    
     // 获取店铺记录
     console.log('[Webhook] 查询店铺记录:', shopDomain);
     const shop = await prisma.shop.findUnique({
