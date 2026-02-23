@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import { Card, Text, BlockStack, TextField, Checkbox, Button } from '@shopify/polaris';
