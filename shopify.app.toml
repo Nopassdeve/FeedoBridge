@@ -1,26 +1,29 @@
-name = "FeedoBridge"
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
 client_id = "9da46159e4de788dab1f3cc2533551e4"
+name = "FeedoBridge"
 application_url = "https://plugin.ifeedog.com"
 embedded = true
-
-[access_scopes]
-scopes = "read_products,write_products,read_customers,write_customers,read_orders,write_orders"
-
-[auth]
-redirect_urls = [
-  "https://plugin.ifeedog.com/api/auth/callback"
-]
 
 [webhooks]
 api_version = "2024-01"
 
-[pos]
-embedded = false
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "customer_read_customers,customer_read_draft_orders,customer_read_orders,customer_write_customers,customer_write_orders,read_assigned_fulfillment_orders,read_customers,read_draft_orders,read_merchant_managed_fulfillment_orders,read_orders,read_products,read_third_party_fulfillment_orders,unauthenticated_read_customers,unauthenticated_write_customers,write_assigned_fulfillment_orders,write_customers,write_draft_orders,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_third_party_fulfillment_orders"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ "https://plugin.ifeedog.com/api/auth/callback" ]
 
 [app_proxy]
 url = "https://plugin.ifeedog.com/proxy"
 subpath = "feedobridge"
 prefix = "apps"
+
+[pos]
+embedded = false
 
 [[extensions]]
 type = "theme"
@@ -31,4 +34,3 @@ handle = "feedobridge-theme-extension"
 type = "checkout_ui_extension"
 name = "Thank You Modal"
 handle = "thank-you-modal"
-
