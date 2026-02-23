@@ -1,0 +1,81 @@
+🚀 FeedoBridge 快速部署命令
+================================
+
+在你的本地终端执行：
+
+1️⃣ SSH 连接到服务器：
+ssh root@31.97.211.143
+
+2️⃣ 连接成功后，执行一键部署命令：
+
+curl -sSL https://raw.githubusercontent.com/Nopassdeve/FeedoBridge/main/full-server-setup.sh | bash
+
+或者分步执行：
+
+# 下载部署脚本
+curl -o /tmp/deploy.sh https://raw.githubusercontent.com/Nopassdeve/FeedoBridge/main/full-server-setup.sh
+
+# 执行部署
+chmod +x /tmp/deploy.sh
+/tmp/deploy.sh
+
+3️⃣ 等待初始化完成后，配置敏感信息：
+
+nano /opt/feedobridge/.env
+
+需要修改的内容：
+- SHOPIFY_API_SECRET (已在 secrets 中)
+- 数据库密码（生成强密码）
+- JWT_SECRET（随机字符串）
+- FEEDOGO_API_KEY
+- SSO_SECRET（随机字符串）
+
+4️⃣ 同步修改 docker-compose.yml 中的数据库密码：
+
+nano /opt/feedobridge/docker-compose.yml
+(修改 POSTGRES_PASSWORD 与 .env 中一致)
+
+5️⃣ 获取 SSL 证书（确保 DNS 已解析）：
+
+certbot --nginx -d plugin.ifeedog.com
+
+6️⃣ 启动应用：
+
+cd /opt/feedobridge
+docker-compose up -d
+
+7️⃣ 查看日志（等待构建完成）：
+
+docker logs feedobridge-app -f
+
+8️⃣ 运行数据库迁移：
+
+docker exec feedobridge-app npx prisma migrate deploy
+
+9️⃣ 验证部署：
+
+curl https://plugin.ifeedog.com/api/test-db?shop=feedogostore.myshopify.com
+
+✅ 完成！
+
+================================
+
+实用命令：
+
+# 查看所有容器
+docker ps -a
+
+# 重启应用
+docker-compose restart app
+
+# 查看应用日志
+docker logs feedobridge-app --tail 100
+
+# 进入应用容器
+docker exec -it feedobridge-app sh
+
+# 停止所有服务
+docker-compose down
+
+# 重新构建并启动
+docker-compose up -d --build
