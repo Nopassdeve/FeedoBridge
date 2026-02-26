@@ -267,7 +267,7 @@ export default function EmbeddedIframe({
           display: loading ? 'none' : 'block'
         }}
         onLoad={handleIframeLoad}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation allow-popups-to-escape-sandbox"
         title="FeedoGo Embedded"
       />
     </Frame>
