@@ -245,7 +245,7 @@ export default function EmbeddedIframe({
   if (!ssoUrl) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <p>加载中...</p>
+        <p>Loading...</p>
       </div>
     );
   }
@@ -254,7 +254,7 @@ export default function EmbeddedIframe({
     <Frame>
       {loading && (
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <p>加载中...</p>
+          <p>Loading...</p>
         </div>
       )}
       <iframe
