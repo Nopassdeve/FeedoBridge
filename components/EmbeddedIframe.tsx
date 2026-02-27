@@ -44,21 +44,13 @@ export default function EmbeddedIframe({
 
   useEffect(() => {
     async function initLogin() {
-      console.log('EmbeddedIframe: initLogin started', {
-        customerEmail,
-        feedogoWebhookUrl,
-        url
-      });
-
       if (!customerEmail) {
-        console.log('EmbeddedIframe: No customerEmail, using direct URL');
         setSsoUrl(url);
         return;
       }
 
       // 优先尝试邮箱登录（如果配置了 FeedoGo Webhook URL）
       if (feedogoWebhookUrl) {
-        console.log('EmbeddedIframe: Attempting email login with:', feedogoWebhookUrl);
         try {
           const response = await fetch('/api/email-login', {
             method: 'POST',
@@ -70,11 +62,9 @@ export default function EmbeddedIframe({
           });
 
           const result = await response.json();
-          console.log('EmbeddedIframe: Email login response:', result);
           
           if (result.success && result.data?.token) {
             // 邮箱登录成功
-            console.log('EmbeddedIframe: Email login SUCCESS, token:', result.data.token.substring(0, 20) + '...');
             setTokenData(result.data);
             
             // 方法1: 尝试通过 hash 传递 token（很多前端框架会读取 hash）
@@ -99,17 +89,12 @@ export default function EmbeddedIframe({
             };
             tokenUrl.hash = `auth=${encodeURIComponent(JSON.stringify(hashData))}`;
             
-            console.log('EmbeddedIframe: Setting URL with token:', tokenUrl.toString());
             setSsoUrl(tokenUrl.toString());
             return;
-          } else {
-            console.warn('EmbeddedIframe: Email login failed, no token in response');
           }
         } catch (error) {
-          console.warn('EmbeddedIframe: Email login error, falling back to SSO:', error);
+          // ignore and fallback to SSO
         }
-      } else {
-        console.log('EmbeddedIframe: No feedogoWebhookUrl, skipping email login');
       }
 
       // 降级到 SSO 登录方式
@@ -150,7 +135,6 @@ export default function EmbeddedIframe({
         try {
           parsedUrl = new URL(redirectUrl);
         } catch (error) {
-          console.warn('Invalid FEEDOGO_TOP_REDIRECT url:', redirectUrl, error);
           return;
         }
 
@@ -162,7 +146,6 @@ export default function EmbeddedIframe({
           host === 'admin.shopify.com';
 
         if (!isShopifyHost) {
-          console.warn('Blocked non-Shopify redirect:', redirectUrl);
           return;
         }
 
@@ -170,7 +153,7 @@ export default function EmbeddedIframe({
           window.top!.location.href = redirectUrl;
           return;
         } catch (error) {
-          console.warn('Top redirect failed in EmbeddedIframe, relaying to parent:', error);
+          // fallback to relay
         }
 
         try {
@@ -182,7 +165,7 @@ export default function EmbeddedIframe({
             '*'
           );
         } catch (error) {
-          console.warn('Relay FEEDOGO_TOP_REDIRECT failed:', error);
+          // ignore
         }
 
         return;
@@ -191,11 +174,9 @@ export default function EmbeddedIframe({
       if (event.origin !== new URL(url).origin) return;
 
       if (event.data.type === 'SSO_SUCCESS') {
-        console.log('SSO login successful');
       }
 
       if (event.data.type === 'EMAIL_LOGIN_SUCCESS') {
-        console.log('Email login successful', event.data);
       }
 
       if (event.data.type === 'RESIZE') {
@@ -253,24 +234,15 @@ export default function EmbeddedIframe({
         expiresIn: tokenData.expiresIn
       };
       
-      console.log('EmbeddedIframe: Sending TOKEN_DATA to iframe:', {
-        type: 'TOKEN_DATA',
-        userId: tokenData.userId,
-        token: tokenData.token.substring(0, 20) + '...',
-        origin: new URL(url).origin
-      });
-      
       iframeRef.current.contentWindow?.postMessage(tokenMessage, new URL(url).origin);
       
       // 延迟 500ms 后再发送一次，确保 iframe 内容已完全加载
       setTimeout(() => {
-        console.log('EmbeddedIframe: Re-sending TOKEN_DATA (delayed)');
         iframeRef.current?.contentWindow?.postMessage(tokenMessage, new URL(url).origin);
       }, 500);
       
       // 再延迟 2 秒发送一次
       setTimeout(() => {
-        console.log('EmbeddedIframe: Re-sending TOKEN_DATA (final attempt)');
         iframeRef.current?.contentWindow?.postMessage(tokenMessage, new URL(url).origin);
       }, 2000);
     }

@@ -106,17 +106,7 @@
     const isMobile = isMobileDevice();
     const targetUrl = isMobile ? mobileUrl : pcUrl;
     const finalUrl = buildUrl(targetUrl);
-    
-    console.log('FeedoBridge: 设备类型 -', isMobile ? '移动端' : 'PC端');
-    console.log('FeedoBridge: 客户登录状态 -', {{ customer_logged_in }});
-    console.log('FeedoBridge: 加载URL -', finalUrl);
-    {% if customer %}
-    console.log('FeedoBridge: 客户邮箱 -', '{{ customer.email }}');
-    {% else %}
-    console.warn('FeedoBridge: ⚠️ 未检测到客户登录，无法自动登录FeedoGo');
-    console.warn('FeedoBridge: 请在Shopify商店前台使用客户账户登录');
-    {% endif %}
-    
+
     iframe.src = finalUrl;
   }
   
@@ -133,7 +123,6 @@
       
       // 只在URL变化时重新加载
       if (currentSrc !== newUrl) {
-        console.log('FeedoBridge: 设备类型变化，重新加载');
         loadIframe();
       }
     }, 500);
@@ -141,8 +130,7 @@
 
   // 监听 iframe 加载完成
   iframe.addEventListener('load', function() {
-    console.log('FeedoBridge: 内容加载成功');
-    
+
     // 如果启用了 SSO，发送客户数据
     {% if block.settings.enable_sso and customer %}
     try {
@@ -155,9 +143,8 @@
         shopDomain: '{{ shop.permanent_domain }}',
         deviceType: isMobileDevice() ? 'mobile' : 'pc'
       }, targetOrigin);
-      console.log('FeedoBridge: SSO 数据已发送');
     } catch (e) {
-      console.warn('FeedoBridge: 无法发送 SSO 数据', e);
+      // ignore
     }
     {% endif %}
   });
@@ -166,15 +153,12 @@
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'FEEDOGO_TOP_REDIRECT' && event.data.url) {
       if (!isAllowedShopifyRedirect(event.data.url)) {
-        console.warn('FeedoBridge: blocked non-Shopify redirect', event.data.url);
         return;
       }
 
-      console.log('FeedoBridge: Received FEEDOGO_TOP_REDIRECT, navigating top window');
       try {
         window.top.location.href = event.data.url;
       } catch (e) {
-        console.warn('FeedoBridge: top redirect blocked, show fallback button', e);
         showRedirectFallback(event.data.url);
       }
       return;
@@ -189,12 +173,10 @@
       // 处理高度调整
       if (event.data.type === 'RESIZE' && event.data.height) {
         iframe.style.height = event.data.height + 'px';
-        console.log('FeedoBridge: 高度已调整为', event.data.height);
       }
 
       // 处理 SSO 成功回调
       if (event.data.type === 'SSO_SUCCESS') {
-        console.log('FeedoBridge: SSO 登录成功');
       }
     } catch (e) {
       // 忽略无效消息
