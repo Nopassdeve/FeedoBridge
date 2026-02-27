@@ -145,6 +145,31 @@ export default function EmbeddedIframe({
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== new URL(url).origin) return;
 
+      if (event.data?.type === 'FEEDOGO_TOP_REDIRECT' && event.data?.url) {
+        const redirectUrl = String(event.data.url);
+
+        try {
+          window.top!.location.href = redirectUrl;
+          return;
+        } catch (error) {
+          console.warn('Top redirect failed in EmbeddedIframe, relaying to parent:', error);
+        }
+
+        try {
+          window.parent.postMessage(
+            {
+              type: 'FEEDOGO_TOP_REDIRECT',
+              url: redirectUrl
+            },
+            '*'
+          );
+        } catch (error) {
+          console.warn('Relay FEEDOGO_TOP_REDIRECT failed:', error);
+        }
+
+        return;
+      }
+
       if (event.data.type === 'SSO_SUCCESS') {
         console.log('SSO login successful');
       }

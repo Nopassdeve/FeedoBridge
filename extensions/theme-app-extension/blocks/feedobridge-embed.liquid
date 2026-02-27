@@ -134,6 +134,12 @@
       const allowedOrigin = new URL(iframe.src).origin;
       if (event.origin !== allowedOrigin) return;
 
+      if (event.data && event.data.type === 'FEEDOGO_TOP_REDIRECT' && event.data.url) {
+        console.log('FeedoBridge: Received FEEDOGO_TOP_REDIRECT, navigating top window');
+        window.top.location.href = event.data.url;
+        return;
+      }
+
       // 处理高度调整
       if (event.data.type === 'RESIZE' && event.data.height) {
         iframe.style.height = event.data.height + 'px';
