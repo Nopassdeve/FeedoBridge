@@ -143,10 +143,28 @@ export default function EmbeddedIframe({
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== new URL(url).origin) return;
-
       if (event.data?.type === 'FEEDOGO_TOP_REDIRECT' && event.data?.url) {
         const redirectUrl = String(event.data.url);
+
+        let parsedUrl: URL | null = null;
+        try {
+          parsedUrl = new URL(redirectUrl);
+        } catch (error) {
+          console.warn('Invalid FEEDOGO_TOP_REDIRECT url:', redirectUrl, error);
+          return;
+        }
+
+        const host = parsedUrl.hostname;
+        const isShopifyHost =
+          host === 'shopify.com' ||
+          host.endsWith('.shopify.com') ||
+          host.endsWith('.myshopify.com') ||
+          host === 'admin.shopify.com';
+
+        if (!isShopifyHost) {
+          console.warn('Blocked non-Shopify redirect:', redirectUrl);
+          return;
+        }
 
         try {
           window.top!.location.href = redirectUrl;
@@ -169,6 +187,8 @@ export default function EmbeddedIframe({
 
         return;
       }
+
+      if (event.origin !== new URL(url).origin) return;
 
       if (event.data.type === 'SSO_SUCCESS') {
         console.log('SSO login successful');

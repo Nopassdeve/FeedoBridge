@@ -32,6 +32,42 @@
 <script>
 (function() {
   const iframe = document.getElementById('feedobridge-iframe-{{ block.id }}');
+  let redirectFallbackBtn = null;
+
+  function isAllowedShopifyRedirect(url) {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname;
+      return host === 'shopify.com' ||
+             host.endsWith('.shopify.com') ||
+             host.endsWith('.myshopify.com') ||
+             host === 'admin.shopify.com';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function showRedirectFallback(url) {
+    if (redirectFallbackBtn) return;
+    redirectFallbackBtn = document.createElement('button');
+    redirectFallbackBtn.textContent = 'Continue to Shopify Login';
+    redirectFallbackBtn.style.position = 'fixed';
+    redirectFallbackBtn.style.left = '50%';
+    redirectFallbackBtn.style.bottom = '20px';
+    redirectFallbackBtn.style.transform = 'translateX(-50%)';
+    redirectFallbackBtn.style.zIndex = '999999';
+    redirectFallbackBtn.style.padding = '12px 18px';
+    redirectFallbackBtn.style.borderRadius = '8px';
+    redirectFallbackBtn.style.border = 'none';
+    redirectFallbackBtn.style.background = '#111827';
+    redirectFallbackBtn.style.color = '#fff';
+    redirectFallbackBtn.style.fontSize = '14px';
+    redirectFallbackBtn.style.cursor = 'pointer';
+    redirectFallbackBtn.addEventListener('click', function() {
+      window.top.location.href = url;
+    });
+    document.body.appendChild(redirectFallbackBtn);
+  }
   const pcUrl = iframe.getAttribute('data-pc-url');
   const mobileUrl = iframe.getAttribute('data-mobile-url');
   const shopDomain = iframe.getAttribute('data-shop');
@@ -128,17 +164,27 @@
 
   // 监听来自嵌入网站的消息
   window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'FEEDOGO_TOP_REDIRECT' && event.data.url) {
+      if (!isAllowedShopifyRedirect(event.data.url)) {
+        console.warn('FeedoBridge: blocked non-Shopify redirect', event.data.url);
+        return;
+      }
+
+      console.log('FeedoBridge: Received FEEDOGO_TOP_REDIRECT, navigating top window');
+      try {
+        window.top.location.href = event.data.url;
+      } catch (e) {
+        console.warn('FeedoBridge: top redirect blocked, show fallback button', e);
+        showRedirectFallback(event.data.url);
+      }
+      return;
+    }
+
     // 验证消息来源
     try {
       if (!iframe.src) return;
       const allowedOrigin = new URL(iframe.src).origin;
       if (event.origin !== allowedOrigin) return;
-
-      if (event.data && event.data.type === 'FEEDOGO_TOP_REDIRECT' && event.data.url) {
-        console.log('FeedoBridge: Received FEEDOGO_TOP_REDIRECT, navigating top window');
-        window.top.location.href = event.data.url;
-        return;
-      }
 
       // 处理高度调整
       if (event.data.type === 'RESIZE' && event.data.height) {
