@@ -196,6 +196,33 @@ export default function EmbeddedIframe({
         return;
       }
 
+      // Relay SHOPIFY_CUSTOMER_LOGOUT / SHOPIFY_AUTH_STATE from parent page → inner FeedoGo iframe
+      if (
+        event.data?.type === 'SHOPIFY_CUSTOMER_LOGOUT' ||
+        event.data?.type === 'SHOPIFY_AUTH_STATE'
+      ) {
+        if (event.source === window.parent && iframeRef.current?.contentWindow) {
+          try {
+            iframeRef.current.contentWindow.postMessage(event.data, new URL(url).origin);
+          } catch (error) {
+            // ignore
+          }
+        }
+        return;
+      }
+
+      // Relay FEEDOGO_LOGOUT_ACK from inner FeedoGo iframe → parent page
+      if (event.data?.type === 'FEEDOGO_LOGOUT_ACK') {
+        if (event.origin === new URL(url).origin) {
+          try {
+            window.parent.postMessage(event.data, '*');
+          } catch (error) {
+            // ignore
+          }
+        }
+        return;
+      }
+
       if (event.origin !== new URL(url).origin) return;
 
       if (event.data.type === 'SSO_SUCCESS') {
