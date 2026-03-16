@@ -20,6 +20,7 @@
     data-pc-url="{{ pc_url }}"
     data-mobile-url="{{ mobile_url }}"
     data-shop="{{ shop.permanent_domain }}"
+    data-customer-logged-in="{{ customer_logged_in }}"
     data-customer-params="{{ customer_params }}"
     src="" 
     style="width: 100%; height: 100%; border: none; min-width: 100vw;" 
@@ -33,6 +34,7 @@
 (function() {
   const iframe = document.getElementById('feedobridge-iframe-{{ block.id }}');
   let redirectFallbackBtn = null;
+  const isCustomerLoggedIn = iframe.getAttribute('data-customer-logged-in') === 'true';
 
   function isAllowedShopifyRedirect(url) {
     try {
@@ -67,6 +69,54 @@
       window.top.location.href = url;
     });
     document.body.appendChild(redirectFallbackBtn);
+  }
+
+  function logoutShopifyCustomer() {
+    try {
+      window.top.location.href = '/account/logout';
+    } catch (e) {
+      window.location.href = '/account/logout';
+    }
+  }
+
+  function isFromIframeOrigin(event) {
+    try {
+      if (!iframe.src) return false;
+      const allowedOrigin = new URL(iframe.src).origin;
+      return event.origin === allowedOrigin;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function sendAuthStateToIframe() {
+    if (!iframe || !iframe.src || !iframe.contentWindow) return;
+
+    try {
+      const targetOrigin = new URL(iframe.src).origin;
+      const authMessage = {
+        type: 'SHOPIFY_AUTH_STATE',
+        loggedIn: isCustomerLoggedIn,
+        customerId: {% if customer %}'{{ customer_id }}'{% else %}null{% endif %},
+        customerEmail: {% if customer %}{{ customer_email | json }}{% else %}null{% endif %},
+        shopDomain: {{ shop.permanent_domain | json }}
+      };
+
+      iframe.contentWindow.postMessage(authMessage, targetOrigin);
+
+      if (!isCustomerLoggedIn) {
+        iframe.contentWindow.postMessage(
+          {
+            type: 'SHOPIFY_CUSTOMER_LOGOUT',
+            reason: 'shopify_customer_not_logged_in',
+            shopDomain: {{ shop.permanent_domain | json }}
+          },
+          targetOrigin
+        );
+      }
+    } catch (e) {
+      // ignore
+    }
   }
   const pcUrl = iframe.getAttribute('data-pc-url');
   const mobileUrl = iframe.getAttribute('data-mobile-url');
@@ -130,6 +180,7 @@
 
   // 监听 iframe 加载完成
   iframe.addEventListener('load', function() {
+    sendAuthStateToIframe();
 
     // 如果启用了 SSO，发送客户数据
     {% if block.settings.enable_sso and customer %}
@@ -147,10 +198,29 @@
       // ignore
     }
     {% endif %}
+
+    setTimeout(sendAuthStateToIframe, 500);
+    setTimeout(sendAuthStateToIframe, 2000);
+  });
+
+  window.addEventListener('focus', sendAuthStateToIframe);
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      sendAuthStateToIframe();
+    }
   });
 
   // 监听来自嵌入网站的消息
   window.addEventListener('message', function(event) {
+    if (event.data && (event.data.type === 'FEEDOGO_CUSTOMER_LOGOUT' || event.data.type === 'FEEDOGO_LOGOUT')) {
+      if (!isFromIframeOrigin(event)) {
+        return;
+      }
+
+      logoutShopifyCustomer();
+      return;
+    }
+
     if (event.data && event.data.type === 'FEEDOGO_TOP_REDIRECT' && event.data.url) {
       if (!isAllowedShopifyRedirect(event.data.url)) {
         return;
@@ -166,9 +236,7 @@
 
     // 验证消息来源
     try {
-      if (!iframe.src) return;
-      const allowedOrigin = new URL(iframe.src).origin;
-      if (event.origin !== allowedOrigin) return;
+      if (!isFromIframeOrigin(event)) return;
 
       // 处理高度调整
       if (event.data.type === 'RESIZE' && event.data.height) {

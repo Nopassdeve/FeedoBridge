@@ -267,6 +267,54 @@ window.addEventListener('message', function(event) {
 });
 ```
 
+### 退出同步（Shopify → 嵌入站点）
+
+当 Shopify 侧用户退出后，父页面会向 iframe 发送退出事件，请在嵌入站点监听并执行本地登出：
+
+```javascript
+window.addEventListener('message', function(event) {
+  // 安全验证：确认来源
+  if (event.origin !== 'https://plugin.ifeedog.com') {
+    return;
+  }
+
+  if (event.data?.type === 'SHOPIFY_CUSTOMER_LOGOUT') {
+    // 1) 清理本地登录态（按你们项目实际 key 调整）
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_id');
+
+    // 2) 清理状态管理（Vuex/Pinia/Redux）
+    // store.dispatch('user/logout') 或等价逻辑
+
+    // 3) 跳转到登录页（可选）
+    // location.href = '/login';
+  }
+});
+```
+
+### 反向退出（嵌入站点 → Shopify）
+
+当用户在嵌入站点主动点击退出时，请通知父页面，让 Shopify 也退出：
+
+```javascript
+function logoutEverywhere() {
+  // 1) 你们站点先执行自己的退出
+  localStorage.removeItem('token');
+  localStorage.removeItem('user_id');
+
+  // 2) 通知父页面执行 Shopify 退出
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage(
+      {
+        type: 'FEEDOGO_CUSTOMER_LOGOUT',
+        source: 'feedogo-frontend'
+      },
+      '*'
+    );
+  }
+}
+```
+
 ---
 
 ## ⚠️ 注意事项

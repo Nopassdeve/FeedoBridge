@@ -171,6 +171,31 @@ export default function EmbeddedIframe({
         return;
       }
 
+      if (event.data?.type === 'FEEDOGO_CUSTOMER_LOGOUT' || event.data?.type === 'FEEDOGO_LOGOUT') {
+        if (event.origin !== new URL(url).origin) return;
+
+        try {
+          window.top!.location.href = '/account/logout';
+          return;
+        } catch (error) {
+          // fallback to relay
+        }
+
+        try {
+          window.parent.postMessage(
+            {
+              type: 'FEEDOGO_CUSTOMER_LOGOUT',
+              source: 'feedogo-iframe'
+            },
+            '*'
+          );
+        } catch (error) {
+          // ignore
+        }
+
+        return;
+      }
+
       if (event.origin !== new URL(url).origin) return;
 
       if (event.data.type === 'SSO_SUCCESS') {
