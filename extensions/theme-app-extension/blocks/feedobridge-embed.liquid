@@ -37,6 +37,7 @@
   const initialCustomerLoggedIn = iframe.getAttribute('data-customer-logged-in') === 'true';
   let currentCustomerLoggedIn = initialCustomerLoggedIn;
   let authProbeInFlight = false;
+  let lastAppliedAuthState = initialCustomerLoggedIn;
 
   function isAllowedShopifyRedirect(url) {
     try {
@@ -121,6 +122,24 @@
     }
   }
 
+  function inferLoggedInFromAccountResponse(response, htmlText) {
+    const finalUrl = response.url || '';
+    if (finalUrl.includes('/account/login') || finalUrl.includes('/challenge')) {
+      return false;
+    }
+
+    const looksLikeLoginPage =
+      htmlText.includes('name="customer[email]"') ||
+      htmlText.includes("name='customer[email]'") ||
+      htmlText.includes('/account/login');
+
+    if (looksLikeLoginPage) {
+      return false;
+    }
+
+    return true;
+  }
+
   async function refreshCustomerAuthState() {
     if (authProbeInFlight) return;
     authProbeInFlight = true;
@@ -133,13 +152,18 @@
         cache: 'no-store'
       });
 
-      const finalUrl = response.url || '';
-      const redirectedToLogin = finalUrl.includes('/account/login');
-      currentCustomerLoggedIn = !redirectedToLogin;
+      const htmlText = await response.text();
+      currentCustomerLoggedIn = inferLoggedInFromAccountResponse(response, htmlText);
     } catch (e) {
-      currentCustomerLoggedIn = initialCustomerLoggedIn;
+      // 探测失败保留当前状态，避免误判
     } finally {
       authProbeInFlight = false;
+
+      if (lastAppliedAuthState !== currentCustomerLoggedIn) {
+        lastAppliedAuthState = currentCustomerLoggedIn;
+        reloadIframeForAuthStateChange();
+      }
+
       sendAuthStateToIframe();
     }
   }
@@ -147,6 +171,10 @@
   const mobileUrl = iframe.getAttribute('data-mobile-url');
   const shopDomain = iframe.getAttribute('data-shop');
   const customerParams = iframe.getAttribute('data-customer-params');
+
+  function getEffectiveCustomerParams() {
+    return currentCustomerLoggedIn ? customerParams : '';
+  }
   
   // 检测设备类型
   function isMobileDevice() {
@@ -169,9 +197,12 @@
                   + '&screenWidth=' + screenWidth
                   + '&screenHeight=' + screenHeight;
     
-    if (customerParams) {
-      fullUrl += customerParams;
+    const effectiveCustomerParams = getEffectiveCustomerParams();
+    if (effectiveCustomerParams) {
+      fullUrl += effectiveCustomerParams;
     }
+
+    fullUrl += '&shopifyLoggedIn=' + (currentCustomerLoggedIn ? '1' : '0');
     
     return fullUrl;
   }
@@ -183,6 +214,16 @@
     const finalUrl = buildUrl(targetUrl);
 
     iframe.src = finalUrl;
+  }
+
+  function reloadIframeForAuthStateChange() {
+    const isMobile = isMobileDevice();
+    const targetUrl = isMobile ? mobileUrl : pcUrl;
+    const finalUrl = buildUrl(targetUrl);
+
+    if (iframe.src !== finalUrl) {
+      iframe.src = finalUrl;
+    }
   }
   
   // 初始加载
