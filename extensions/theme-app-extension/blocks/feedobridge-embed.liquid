@@ -38,6 +38,8 @@
   let currentCustomerLoggedIn = initialCustomerLoggedIn;
   let authProbeInFlight = false;
   let lastAppliedAuthState = initialCustomerLoggedIn;
+  const pendingLogoutAcks = {};
+  const logoutAckTimeoutMs = 5000;
 
   function isAllowedShopifyRedirect(url) {
     try {
@@ -108,18 +110,34 @@
       iframe.contentWindow.postMessage(authMessage, targetOrigin);
 
       if (!currentCustomerLoggedIn) {
-        iframe.contentWindow.postMessage(
-          {
-            type: 'SHOPIFY_CUSTOMER_LOGOUT',
-            reason: 'shopify_customer_not_logged_in',
-            shopDomain: {{ shop.permanent_domain | json }}
-          },
-          targetOrigin
-        );
+        sendLogoutEventToIframe(targetOrigin, 'shopify_customer_not_logged_in');
       }
     } catch (e) {
       // ignore
     }
+  }
+
+  function sendLogoutEventToIframe(targetOrigin, reason) {
+    if (!iframe || !iframe.contentWindow) return;
+
+    const requestId = 'logout_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+    iframe.contentWindow.postMessage(
+      {
+        type: 'SHOPIFY_CUSTOMER_LOGOUT',
+        reason: reason || 'shopify_customer_not_logged_in',
+        requestId: requestId,
+        shopDomain: {{ shop.permanent_domain | json }}
+      },
+      targetOrigin
+    );
+
+    console.info('[FeedoBridge][LogoutSync] logout sent to iframe', { requestId: requestId, reason: reason });
+
+    pendingLogoutAcks[requestId] = setTimeout(function() {
+      console.warn('[FeedoBridge][LogoutSync] logout ack timeout', { requestId: requestId, timeoutMs: logoutAckTimeoutMs });
+      delete pendingLogoutAcks[requestId];
+    }, logoutAckTimeoutMs);
   }
 
   function inferLoggedInFromAccountResponse(response, htmlText) {
@@ -284,6 +302,24 @@
 
   // 监听来自嵌入网站的消息
   window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'FEEDOGO_LOGOUT_ACK') {
+      if (!isFromIframeOrigin(event)) {
+        return;
+      }
+
+      const requestId = event.data.requestId;
+      if (requestId && pendingLogoutAcks[requestId]) {
+        clearTimeout(pendingLogoutAcks[requestId]);
+        delete pendingLogoutAcks[requestId];
+      }
+
+      console.info('[FeedoBridge][LogoutSync] logout ack received from iframe', {
+        requestId: requestId || null,
+        handledAt: event.data.handledAt || null
+      });
+      return;
+    }
+
     if (event.data && (event.data.type === 'FEEDOGO_CUSTOMER_LOGOUT' || event.data.type === 'FEEDOGO_LOGOUT')) {
       if (!isFromIframeOrigin(event)) {
         return;
