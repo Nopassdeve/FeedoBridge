@@ -34,7 +34,9 @@
 (function() {
   const iframe = document.getElementById('feedobridge-iframe-{{ block.id }}');
   let redirectFallbackBtn = null;
-  const isCustomerLoggedIn = iframe.getAttribute('data-customer-logged-in') === 'true';
+  const initialCustomerLoggedIn = iframe.getAttribute('data-customer-logged-in') === 'true';
+  let currentCustomerLoggedIn = initialCustomerLoggedIn;
+  let authProbeInFlight = false;
 
   function isAllowedShopifyRedirect(url) {
     try {
@@ -96,15 +98,15 @@
       const targetOrigin = new URL(iframe.src).origin;
       const authMessage = {
         type: 'SHOPIFY_AUTH_STATE',
-        loggedIn: isCustomerLoggedIn,
-        customerId: {% if customer %}'{{ customer_id }}'{% else %}null{% endif %},
-        customerEmail: {% if customer %}{{ customer_email | json }}{% else %}null{% endif %},
+        loggedIn: currentCustomerLoggedIn,
+        customerId: currentCustomerLoggedIn ? {% if customer %}'{{ customer_id }}'{% else %}null{% endif %} : null,
+        customerEmail: currentCustomerLoggedIn ? {% if customer %}{{ customer_email | json }}{% else %}null{% endif %} : null,
         shopDomain: {{ shop.permanent_domain | json }}
       };
 
       iframe.contentWindow.postMessage(authMessage, targetOrigin);
 
-      if (!isCustomerLoggedIn) {
+      if (!currentCustomerLoggedIn) {
         iframe.contentWindow.postMessage(
           {
             type: 'SHOPIFY_CUSTOMER_LOGOUT',
@@ -116,6 +118,29 @@
       }
     } catch (e) {
       // ignore
+    }
+  }
+
+  async function refreshCustomerAuthState() {
+    if (authProbeInFlight) return;
+    authProbeInFlight = true;
+
+    try {
+      const response = await fetch('/account', {
+        method: 'GET',
+        credentials: 'include',
+        redirect: 'follow',
+        cache: 'no-store'
+      });
+
+      const finalUrl = response.url || '';
+      const redirectedToLogin = finalUrl.includes('/account/login');
+      currentCustomerLoggedIn = !redirectedToLogin;
+    } catch (e) {
+      currentCustomerLoggedIn = initialCustomerLoggedIn;
+    } finally {
+      authProbeInFlight = false;
+      sendAuthStateToIframe();
     }
   }
   const pcUrl = iframe.getAttribute('data-pc-url');
@@ -180,7 +205,7 @@
 
   // 监听 iframe 加载完成
   iframe.addEventListener('load', function() {
-    sendAuthStateToIframe();
+    refreshCustomerAuthState();
 
     // 如果启用了 SSO，发送客户数据
     {% if block.settings.enable_sso and customer %}
@@ -199,16 +224,22 @@
     }
     {% endif %}
 
-    setTimeout(sendAuthStateToIframe, 500);
-    setTimeout(sendAuthStateToIframe, 2000);
+    setTimeout(refreshCustomerAuthState, 500);
+    setTimeout(refreshCustomerAuthState, 2000);
   });
 
-  window.addEventListener('focus', sendAuthStateToIframe);
+  window.addEventListener('focus', refreshCustomerAuthState);
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
-      sendAuthStateToIframe();
+      refreshCustomerAuthState();
     }
   });
+
+  setInterval(function() {
+    if (!document.hidden) {
+      refreshCustomerAuthState();
+    }
+  }, 15000);
 
   // 监听来自嵌入网站的消息
   window.addEventListener('message', function(event) {
