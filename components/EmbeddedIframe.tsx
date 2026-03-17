@@ -164,6 +164,7 @@ export default function EmbeddedIframe({
 
             const storefrontLoginUrl = new URL('/account/login', storefrontOrigin);
             storefrontLoginUrl.searchParams.set('return_url', returnUrl);
+            storefrontLoginUrl.searchParams.set('checkout_url', returnUrl);
             return storefrontLoginUrl.toString();
           }
 
@@ -172,6 +173,7 @@ export default function EmbeddedIframe({
           }
 
           parsed.searchParams.set('return_url', returnUrl);
+          parsed.searchParams.set('checkout_url', returnUrl);
           return parsed.toString();
         };
 

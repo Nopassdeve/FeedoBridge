@@ -80,11 +80,13 @@
       if ((isAccountPath || isShopifyAuthenticationLogin) && (isShopifyPlatformHost || parsed.origin !== window.location.origin)) {
         const storefrontLoginUrl = new URL('/account/login', window.location.origin);
         storefrontLoginUrl.searchParams.set('return_url', returnUrl);
+        storefrontLoginUrl.searchParams.set('checkout_url', returnUrl);
         return storefrontLoginUrl.toString();
       }
 
       if (parsed.pathname.startsWith('/account/login')) {
         parsed.searchParams.set('return_url', returnUrl);
+        parsed.searchParams.set('checkout_url', returnUrl);
       }
 
       return parsed.toString();
