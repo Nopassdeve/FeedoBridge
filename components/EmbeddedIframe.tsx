@@ -139,18 +139,33 @@ export default function EmbeddedIframe({
             return value;
           }
 
-          if (!parsed.pathname.startsWith('/account/login')) {
-            return parsed.toString();
-          }
-
+          let storefrontOrigin: string | null = null;
           let returnPath = '/';
           try {
             if (document.referrer) {
               const referrer = new URL(document.referrer);
+              storefrontOrigin = referrer.origin;
               returnPath = `${referrer.pathname || '/'}${referrer.search || ''}${referrer.hash || ''}`;
             }
           } catch (error) {
             // ignore
+          }
+
+          const isShopifyPlatformHost = parsed.hostname === 'shopify.com' || parsed.hostname.endsWith('.shopify.com');
+          const isAccountPath = parsed.pathname.startsWith('/account');
+
+          if (isAccountPath && (isShopifyPlatformHost || (storefrontOrigin && parsed.origin !== storefrontOrigin))) {
+            if (!storefrontOrigin) {
+              return parsed.toString();
+            }
+
+            const storefrontLoginUrl = new URL('/account/login', storefrontOrigin);
+            storefrontLoginUrl.searchParams.set('return_url', returnPath);
+            return storefrontLoginUrl.toString();
+          }
+
+          if (!parsed.pathname.startsWith('/account/login')) {
+            return parsed.toString();
           }
 
           parsed.searchParams.set('return_url', returnPath);

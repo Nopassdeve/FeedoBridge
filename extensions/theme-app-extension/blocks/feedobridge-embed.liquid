@@ -67,9 +67,19 @@
   function normalizeLoginRedirect(url) {
     try {
       const parsed = new URL(url, window.location.origin);
+      const returnPath = getCurrentPageReturnPath();
+
+      const isShopifyPlatformHost = parsed.hostname === 'shopify.com' || parsed.hostname.endsWith('.shopify.com');
+      const isAccountPath = parsed.pathname.startsWith('/account');
+
+      if (isAccountPath && (isShopifyPlatformHost || parsed.origin !== window.location.origin)) {
+        const storefrontLoginUrl = new URL('/account/login', window.location.origin);
+        storefrontLoginUrl.searchParams.set('return_url', returnPath);
+        return storefrontLoginUrl.toString();
+      }
 
       if (parsed.pathname.startsWith('/account/login')) {
-        parsed.searchParams.set('return_url', getCurrentPageReturnPath());
+        parsed.searchParams.set('return_url', returnPath);
       }
 
       return parsed.toString();
