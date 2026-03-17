@@ -139,7 +139,7 @@ export default function EmbeddedIframe({
             return value;
           }
 
-          if (!parsed.pathname.startsWith('/account/login') || parsed.searchParams.has('return_url')) {
+          if (!parsed.pathname.startsWith('/account/login')) {
             return parsed.toString();
           }
 

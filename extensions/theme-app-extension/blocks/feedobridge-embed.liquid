@@ -68,7 +68,7 @@
     try {
       const parsed = new URL(url, window.location.origin);
 
-      if (parsed.pathname.startsWith('/account/login') && !parsed.searchParams.has('return_url')) {
+      if (parsed.pathname.startsWith('/account/login')) {
         parsed.searchParams.set('return_url', getCurrentPageReturnPath());
       }
 
