@@ -64,22 +64,27 @@
     return path + search + hash;
   }
 
+  function getCurrentPageReturnUrl() {
+    return window.location.origin + getCurrentPageReturnPath();
+  }
+
   function normalizeLoginRedirect(url) {
     try {
       const parsed = new URL(url, window.location.origin);
-      const returnPath = getCurrentPageReturnPath();
+      const returnUrl = getCurrentPageReturnUrl();
 
       const isShopifyPlatformHost = parsed.hostname === 'shopify.com' || parsed.hostname.endsWith('.shopify.com');
       const isAccountPath = parsed.pathname.startsWith('/account');
+      const isShopifyAuthenticationLogin = parsed.pathname.includes('/authentication/') && parsed.pathname.endsWith('/login');
 
-      if (isAccountPath && (isShopifyPlatformHost || parsed.origin !== window.location.origin)) {
+      if ((isAccountPath || isShopifyAuthenticationLogin) && (isShopifyPlatformHost || parsed.origin !== window.location.origin)) {
         const storefrontLoginUrl = new URL('/account/login', window.location.origin);
-        storefrontLoginUrl.searchParams.set('return_url', returnPath);
+        storefrontLoginUrl.searchParams.set('return_url', returnUrl);
         return storefrontLoginUrl.toString();
       }
 
       if (parsed.pathname.startsWith('/account/login')) {
-        parsed.searchParams.set('return_url', returnPath);
+        parsed.searchParams.set('return_url', returnUrl);
       }
 
       return parsed.toString();

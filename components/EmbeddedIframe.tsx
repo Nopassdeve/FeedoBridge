@@ -151,16 +151,19 @@ export default function EmbeddedIframe({
             // ignore
           }
 
+          const returnUrl = storefrontOrigin ? `${storefrontOrigin}${returnPath}` : returnPath;
+
           const isShopifyPlatformHost = parsed.hostname === 'shopify.com' || parsed.hostname.endsWith('.shopify.com');
           const isAccountPath = parsed.pathname.startsWith('/account');
+          const isShopifyAuthenticationLogin = parsed.pathname.includes('/authentication/') && parsed.pathname.endsWith('/login');
 
-          if (isAccountPath && (isShopifyPlatformHost || (storefrontOrigin && parsed.origin !== storefrontOrigin))) {
+          if ((isAccountPath || isShopifyAuthenticationLogin) && (isShopifyPlatformHost || (storefrontOrigin && parsed.origin !== storefrontOrigin))) {
             if (!storefrontOrigin) {
               return parsed.toString();
             }
 
             const storefrontLoginUrl = new URL('/account/login', storefrontOrigin);
-            storefrontLoginUrl.searchParams.set('return_url', returnPath);
+            storefrontLoginUrl.searchParams.set('return_url', returnUrl);
             return storefrontLoginUrl.toString();
           }
 
@@ -168,7 +171,7 @@ export default function EmbeddedIframe({
             return parsed.toString();
           }
 
-          parsed.searchParams.set('return_url', returnPath);
+          parsed.searchParams.set('return_url', returnUrl);
           return parsed.toString();
         };
 
