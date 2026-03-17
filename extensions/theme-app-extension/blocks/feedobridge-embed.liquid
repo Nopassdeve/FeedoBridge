@@ -43,14 +43,38 @@
 
   function isAllowedShopifyRedirect(url) {
     try {
-      const parsed = new URL(url);
+      const parsed = new URL(url, window.location.origin);
       const host = parsed.hostname;
-      return host === 'shopify.com' ||
-             host.endsWith('.shopify.com') ||
-             host.endsWith('.myshopify.com') ||
-             host === 'admin.shopify.com';
+      const isShopifyHost = host === 'shopify.com' ||
+                            host.endsWith('.shopify.com') ||
+                            host.endsWith('.myshopify.com') ||
+                            host === 'admin.shopify.com';
+      const isCurrentStoreAccount = parsed.origin === window.location.origin && parsed.pathname.startsWith('/account');
+
+      return isShopifyHost || isCurrentStoreAccount;
     } catch (e) {
       return false;
+    }
+  }
+
+  function getCurrentPageReturnPath() {
+    const path = window.location.pathname || '/';
+    const search = window.location.search || '';
+    const hash = window.location.hash || '';
+    return path + search + hash;
+  }
+
+  function normalizeLoginRedirect(url) {
+    try {
+      const parsed = new URL(url, window.location.origin);
+
+      if (parsed.pathname.startsWith('/account/login') && !parsed.searchParams.has('return_url')) {
+        parsed.searchParams.set('return_url', getCurrentPageReturnPath());
+      }
+
+      return parsed.toString();
+    } catch (e) {
+      return url;
     }
   }
 
@@ -330,14 +354,16 @@
     }
 
     if (event.data && event.data.type === 'FEEDOGO_TOP_REDIRECT' && event.data.url) {
-      if (!isAllowedShopifyRedirect(event.data.url)) {
+      const targetUrl = normalizeLoginRedirect(String(event.data.url));
+
+      if (!isAllowedShopifyRedirect(targetUrl)) {
         return;
       }
 
       try {
-        window.top.location.href = event.data.url;
+        window.top.location.href = targetUrl;
       } catch (e) {
-        showRedirectFallback(event.data.url);
+        showRedirectFallback(targetUrl);
       }
       return;
     }

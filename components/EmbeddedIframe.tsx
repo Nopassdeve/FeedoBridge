@@ -129,7 +129,35 @@ export default function EmbeddedIframe({
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'FEEDOGO_TOP_REDIRECT' && event.data?.url) {
-        const redirectUrl = String(event.data.url);
+        const requestedUrl = String(event.data.url);
+
+        const normalizeLoginRedirect = (value: string) => {
+          let parsed: URL;
+          try {
+            parsed = new URL(value);
+          } catch (error) {
+            return value;
+          }
+
+          if (!parsed.pathname.startsWith('/account/login') || parsed.searchParams.has('return_url')) {
+            return parsed.toString();
+          }
+
+          let returnPath = '/';
+          try {
+            if (document.referrer) {
+              const referrer = new URL(document.referrer);
+              returnPath = `${referrer.pathname || '/'}${referrer.search || ''}${referrer.hash || ''}`;
+            }
+          } catch (error) {
+            // ignore
+          }
+
+          parsed.searchParams.set('return_url', returnPath);
+          return parsed.toString();
+        };
+
+        const redirectUrl = normalizeLoginRedirect(requestedUrl);
 
         let parsedUrl: URL | null = null;
         try {
@@ -144,8 +172,17 @@ export default function EmbeddedIframe({
           host.endsWith('.shopify.com') ||
           host.endsWith('.myshopify.com') ||
           host === 'admin.shopify.com';
+        let isStorefrontAccountUrl = false;
+        try {
+          if (document.referrer) {
+            const referrerHost = new URL(document.referrer).hostname;
+            isStorefrontAccountUrl = host === referrerHost && parsedUrl.pathname.startsWith('/account');
+          }
+        } catch (error) {
+          // ignore
+        }
 
-        if (!isShopifyHost) {
+        if (!isShopifyHost && !isStorefrontAccountUrl) {
           return;
         }
 
